@@ -33,6 +33,7 @@ const loadingEl = document.getElementById('loading-indicator') as HTMLDivElement
 const sidebarEl = document.getElementById('tag-editor-sidebar') as HTMLDivElement;
 const searchInput = document.getElementById('search-input') as HTMLInputElement;
 const refreshBtn = document.getElementById('refresh-btn') as HTMLButtonElement;
+const sortSelect = document.getElementById('sort-select') as HTMLSelectElement;
 
 // 3. Core Logic
 async function init() {
@@ -60,7 +61,7 @@ async function fetchItems() {
         const res = await itemsApi.getItems({
             recursive: true,
             includeItemTypes: ['Movie', 'Series'],
-            fields: ['Tags', 'ImageTags'] as any[]
+            fields: ['Tags', 'ImageTags', 'DateCreated'] as any[]
         });
         allItems = res.data.Items || [];
         renderGrid(allItems);
@@ -150,10 +151,29 @@ function clearSelection() {
 
 function filterAndRender() {
     const q = searchInput.value.toLowerCase();
-    const filtered = allItems.filter(i =>
+    let filtered = allItems.filter(i =>
         i.Name.toLowerCase().includes(q) ||
         (i.Tags && i.Tags.some((t: string) => t.toLowerCase().includes(q)))
     );
+
+    const sortVal = sortSelect.value;
+    filtered.sort((a, b) => {
+        if (sortVal === 'name-asc') {
+            return (a.Name || '').localeCompare(b.Name || '');
+        } else if (sortVal === 'name-desc') {
+            return (b.Name || '').localeCompare(a.Name || '');
+        } else if (sortVal === 'date-desc') {
+            const dA = new Date(a.DateCreated || 0).getTime();
+            const dB = new Date(b.DateCreated || 0).getTime();
+            return dB - dA;
+        } else if (sortVal === 'date-asc') {
+            const dA = new Date(a.DateCreated || 0).getTime();
+            const dB = new Date(b.DateCreated || 0).getTime();
+            return dA - dB;
+        }
+        return 0;
+    });
+
     renderGrid(filtered);
 }
 
@@ -306,6 +326,7 @@ function renderSidebarEditor(proposedTags: string[], tagCounts: Record<string, n
 // 5. Setup Listeners
 searchInput.addEventListener('input', filterAndRender);
 refreshBtn.addEventListener('click', fetchItems);
+sortSelect.addEventListener('change', filterAndRender);
 
 // Boot
 init();
