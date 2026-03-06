@@ -94,6 +94,10 @@ select.glass-input option {
   box-shadow: 0 4px 15px rgba(170, 92, 195, 0.3);
 }
 
+.sidebar-container {
+  padding: 16px;
+}
+
 .glass-button:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(170, 92, 195, 0.4);
@@ -149,7 +153,7 @@ select.glass-input option {
     top: 0;
     right: -20px;
     height: 100vh;
-    padding: 16px 16px 16px 0 !important;
+    padding: 16px;
     z-index: 100;
     pointer-events: none;
   }
