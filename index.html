@@ -11,13 +11,13 @@
 <body>
   <div style="display: flex; height: 100vh; flex-direction: column;">
     <header class="glass-panel"
-      style="margin: 16px; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; border-radius: 16px;">
-      <div style="display: flex; align-items: center; gap: 16px;">
+      style="margin: 16px; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; border-radius: 16px; flex-wrap: wrap; gap: 12px;">
+      <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
         <h1
           style="font-size: 1.5rem; font-weight: 800; background: linear-gradient(to right, var(--jelly-blue), var(--jelly-purple)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0;">
           JellyTags
         </h1>
-        <div style="padding-left: 16px; border-left: 1px solid var(--glass-border);">
+        <div class="header-search" style="padding-left: 16px; border-left: 1px solid var(--glass-border);">
           <input id="search-input" class="glass-input" placeholder="Search by name or tag..."
             style="width: 300px; padding: 8px 16px; border-radius: 20px;" />
         </div>
@@ -35,11 +35,15 @@
           style="padding: 8px 16px; font-size: 0.9rem; background: rgba(255,255,255,0.1); box-shadow: none;">
           Refresh
         </button>
+        <button id="sidebar-toggle" class="glass-button mobile-only"
+          style="padding: 8px 12px; font-size: 0.9rem; background: rgba(255,255,255,0.1); box-shadow: none; display: none;">
+          ☰
+        </button>
       </div>
     </header>
 
     <div style="display: flex; flex: 1; overflow: hidden;">
-      <div style="flex: 1; overflow-y: auto; padding-bottom: 24px;">
+      <div style="flex: 1; overflow-y: auto; padding-bottom: 24px;" class="main-content">
         <div id="loading-indicator"
           style="display: flex; align-items: center; justify-content: center; height: 100%; color: var(--text-muted);">
           <h3>Loading your library...</h3>
@@ -50,11 +54,15 @@
         </div>
       </div>
 
-      <div style="padding: 0 16px 16px 0;">
+      <div class="sidebar-container" style="padding: 0 16px 16px 0;">
+        <div id="sidebar-overlay" class="sidebar-overlay"></div>
         <div id="tag-editor-sidebar" class="glass-panel"
           style="width: 320px; padding: 24px; display: flex; flex-direction: column; gap: 24px; color: var(--text-muted);">
-          <h3 style="color: var(--text-main); margin-bottom: 16px;">Tag Editor</h3>
-          <p style="font-size: 0.9rem;">Select items from the grid to edit their tags.</p>
+          <div class="sidebar-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="color: var(--text-main); margin-bottom: 16px;">Tag Editor</h3>
+            <button id="sidebar-close" class="mobile-only" style="display: none; background: none; border: none; color: var(--text-muted); font-size: 1.5rem; cursor: pointer;">&times;</button>
+          </div>
+          <p class="sidebar-empty-msg" style="font-size: 0.9rem;">Select items from the grid to edit their tags.</p>
         </div>
       </div>
     </div>

@@ -31,9 +31,28 @@ let currentUserId = '';
 const gridEl = document.getElementById('media-grid') as HTMLDivElement;
 const loadingEl = document.getElementById('loading-indicator') as HTMLDivElement;
 const sidebarEl = document.getElementById('tag-editor-sidebar') as HTMLDivElement;
+const sidebarOverlay = document.getElementById('sidebar-overlay') as HTMLDivElement;
 const searchInput = document.getElementById('search-input') as HTMLInputElement;
 const refreshBtn = document.getElementById('refresh-btn') as HTMLButtonElement;
 const sortSelect = document.getElementById('sort-select') as HTMLSelectElement;
+const sidebarToggle = document.getElementById('sidebar-toggle') as HTMLButtonElement;
+const sidebarClose = document.getElementById('sidebar-close') as HTMLButtonElement;
+
+function openSidebar() {
+    sidebarEl.classList.add('open');
+    sidebarOverlay.classList.add('visible');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeSidebar() {
+    sidebarEl.classList.remove('open');
+    sidebarOverlay.classList.remove('visible');
+    document.body.style.overflow = '';
+}
+
+sidebarToggle?.addEventListener('click', openSidebar);
+sidebarClose?.addEventListener('click', closeSidebar);
+sidebarOverlay?.addEventListener('click', closeSidebar);
 
 // 3. Core Logic
 async function init() {
@@ -181,9 +200,15 @@ function filterAndRender() {
 function updateSidebar() {
     if (selectedIds.size === 0) {
         sidebarEl.innerHTML = `
-            <h3 style="color: var(--text-main); margin-bottom: 16px;">Tag Editor</h3>
-            <p style="font-size: 0.9rem;">Select items from the grid to edit their tags.</p>
+            <div class="sidebar-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="color: var(--text-main); margin-bottom: 16px;">Tag Editor</h3>
+                <button id="sidebar-close" class="mobile-only" style="display: none; background: none; border: none; color: var(--text-muted); font-size: 1.5rem; cursor: pointer;">&times;</button>
+            </div>
+            <p class="sidebar-empty-msg" style="font-size: 0.9rem;">Select items from the grid to edit their tags.</p>
         `;
+        const closeBtn = document.getElementById('sidebar-close');
+        closeBtn?.addEventListener('click', closeSidebar);
+        closeSidebar();
         return;
     }
 
@@ -209,14 +234,18 @@ function updateSidebar() {
 
 function renderSidebarEditor(proposedTags: string[], tagCounts: Record<string, number>) {
     const selectedItems = allItems.filter(i => selectedIds.has(i.Id));
+    const isMobile = window.innerWidth <= 768;
 
     sidebarEl.innerHTML = `
         <div>
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
                 <h3 style="margin: 0; color: var(--text-main)">Edit Tags</h3>
-                <span style="font-size: 0.8rem; background: var(--jelly-blue); color: white; padding: 2px 8px; border-radius: 12px; font-weight: bold;">
-                    ${selectedIds.size} selected
-                </span>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 0.8rem; background: var(--jelly-blue); color: white; padding: 2px 8px; border-radius: 12px; font-weight: bold;">
+                        ${selectedIds.size} selected
+                    </span>
+                    ${isMobile ? '<button id="sidebar-close" style="background: none; border: none; color: var(--text-muted); font-size: 1.5rem; cursor: pointer; padding: 0;">&times;</button>' : ''}
+                </div>
             </div>
             <button id="clear-btn" style="background: transparent; border: 1px solid var(--glass-border); color: var(--text-muted); padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; width: 100%;">
                 Clear Selection
@@ -282,6 +311,8 @@ function renderSidebarEditor(proposedTags: string[], tagCounts: Record<string, n
     `;
 
     document.getElementById('clear-btn')?.addEventListener('click', clearSelection);
+
+    document.getElementById('sidebar-close')?.addEventListener('click', closeSidebar);
 
     document.getElementById('add-tag-form')?.addEventListener('submit', (e) => {
         e.preventDefault();
