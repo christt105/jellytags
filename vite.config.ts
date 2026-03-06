@@ -3,7 +3,7 @@ import { defineConfig } from 'vite'
 export default defineConfig({
   server: {
     host: '0.0.0.0',
-    port: 5173
+    port: 8181
   },
   define: {
     'import.meta.env.VITE_JELLYFIN_URL': '"__JELLYFIN_URL__"',

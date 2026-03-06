@@ -270,6 +270,14 @@ function renderSidebarEditor(tagCounts: Record<string, number>) {
             ` : ''}
         </div>
 
+        <div style="display: flex; gap: 16px; margin-bottom: 12px; margin-top: 12px; padding: 0 4px;">
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 0.85rem; cursor: pointer; color: var(--text-main);">
+                <input type="radio" name="apply-mode" value="append" checked style="accent-color: var(--jelly-blue);" /> Append
+            </label>
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 0.85rem; cursor: pointer; color: var(--text-main);">
+                <input type="radio" name="apply-mode" value="replace" style="accent-color: var(--jelly-blue);" /> Replace
+            </label>
+        </div>
         <button id="apply-btn" class="glass-button apply-btn">
             Apply to ${selectedIds.size} Items
         </button>
@@ -343,21 +351,28 @@ function renderSidebarEditor(tagCounts: Record<string, number>) {
         btn.disabled = true;
         btn.classList.add('apply-btn-disabled');
 
+        const modeInput = document.querySelector('input[name="apply-mode"]:checked') as HTMLInputElement | null;
+        const mode = modeInput ? modeInput.value : 'append';
+
         try {
             const ids = Array.from(selectedIds);
-            // Updating tags: we fetch the item first, apply new tags, update.
-            // Jellyfin usually accepts the full item object via POST to /Items/{Id}
+
             for (const id of ids) {
-                // Fetch the full BaseItemDto contextually tied to this exact user resolving any validation errors.
                 const itemRes = await userLibraryApi.getItem({ itemId: id, userId: currentUserId });
                 const fullItem = itemRes.data;
 
-                // Update tags and send the full schema back
-                fullItem.Tags = [...proposedTags];
+                if (mode === 'append') {
+                    const currentTags = fullItem.Tags || [];
+                    const newTags = Array.from(new Set([...currentTags, ...proposedTags]));
+                    fullItem.Tags = newTags;
+                } else {
+                    fullItem.Tags = [...proposedTags];
+                }
+
                 await updateApi.updateItem({ itemId: id, baseItemDto: fullItem });
 
                 const localItem = allItems.find(i => i.Id === id);
-                if (localItem) localItem.Tags = [...proposedTags];
+                if (localItem) localItem.Tags = [...fullItem.Tags];
             }
             alert(`Successfully updated tags for ${ids.length} items!`);
             clearSelection();
