@@ -1,13 +1,13 @@
 services:
-  web:
-    build:
-      context: .
-      dockerfile: Dockerfile.dev
+  jellytags:
+    build: .
+    container_name: jellytags
+    restart: unless-stopped
     ports:
-      - "5173:5173"
-    volumes:
-      - .:/app
-      - /app/node_modules
+      - "8181:80"
     environment:
-      - CHOKIDAR_USEPOLLING=true # Helps with file watching on some hosts
-    command: npm run dev -- --host
+      - VITE_JELLYFIN_URL=http://your-jellyfin-server:8096
+      - VITE_JELLYFIN_TOKEN=your-api-token # MUST HAVE ADMIN PRIVILEGES
+    # Optionally mount a local env file
+    # env_file:
+    #   - .env

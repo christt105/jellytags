@@ -1,73 +1,74 @@
-# React + TypeScript + Vite
+<p align="center">
+  <img src="logo.png" alt="JellyTags Logo" width="150" />
+</p>
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+# JellyTags
+JellyTags is a lightweight, responsive web application for managing tags within your Jellyfin media library. Easily select multiple movies or shows and batch-apply tags.
 
-Currently, two official plugins are available:
+![Screenshot](docs/screenshot.png)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Features
+- **Batch Editing:** Select multiple media items and apply tags to all of them at once.
+- **Tag Suggestions:** View existing tags across your selection and easily propose new or current ones.
+- **Responsive Design:** A mobile-friendly sliding sidebar allows you to manage tags on the go.
+- **Sorting & Filtering:** Find specific media quickly using the built-in search bar and sorting dropdown.
 
-## React Compiler
+## Requirements
+- A [Jellyfin](https://jellyfin.org/) server.
+- An API Token from your Jellyfin server with **Administrator** privileges (needed to fetch the admin user's library context and update items).
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Running via Docker (Recommended)
+You can easily spin up the JellyTags interface using Docker and Docker Compose. Environment variables are substituted at runtime.
 
-## Expanding the ESLint configuration
+### 1. Create a `docker-compose.yml`
+Create a `docker-compose.yml` file anywhere on your server, or clone this repository and modify the existing one.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```yaml
+services:
+  jellytags:
+    build: . # or use an image if published
+    container_name: jellytags
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    environment:
+      - VITE_JELLYFIN_URL=http://your-jellyfin-server-ip:8096
+      - VITE_JELLYFIN_TOKEN=your_admin_api_token
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### 2. Start the container
+Run the following command:
+```bash
+docker-compose up -d
 ```
+Access the interface at `http://localhost:8080`.
+
+## Installation (Local Development)
+
+### 1. Clone the repository
+```bash
+git clone https://github.com/yourusername/jellytags.git
+cd jellytags
+```
+
+### 2. Install dependencies
+```bash
+npm install
+```
+
+### 3. Environment Variables
+To run JellyTags locally, create a `.env` file at the root of the project:
+```env
+VITE_JELLYFIN_URL=http://localhost:8096
+VITE_JELLYFIN_TOKEN=your_admin_api_token
+```
+
+### 4. Start the Development Server
+```bash
+npm run dev
+```
+
+## Support / Sponsor
+If you found this tool useful, consider buying me a coffee!
+
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/christt105)
