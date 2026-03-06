@@ -7,6 +7,11 @@ JellyTags is a lightweight, responsive web application for managing tags within 
 
 ![Screenshot](docs/screenshot.png)
 
+> [!WARNING]
+> **Early Version & Disclaimer**
+> 
+> This is an early-stage release. While it has been thoroughly tested, this application modifies your media metadata. We strongly recommend creating a backup of your Jellyfin database before use. Use it at your own risk.
+
 ## Features
 - **Batch Editing:** Select multiple media items and apply tags to all of them at once.
 - **Tag Suggestions:** View existing tags across your selection and easily propose new or current ones.
