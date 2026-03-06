@@ -4,6 +4,8 @@ import { getItemUpdateApi } from '@jellyfin/sdk/lib/utils/api/item-update-api';
 import { getSystemApi } from '@jellyfin/sdk/lib/utils/api/system-api';
 import { getUserApi } from '@jellyfin/sdk/lib/utils/api/user-api';
 import { getUserLibraryApi } from '@jellyfin/sdk/lib/utils/api/user-library-api';
+import { BaseItemKind, ItemFields } from '@jellyfin/sdk/lib/generated-client/models';
+import type { ItemsApi } from '@jellyfin/sdk/lib/generated-client/api/items-api';
 
 // 1. Initialize SDK
 const jellyfin = new Jellyfin({
@@ -26,6 +28,7 @@ const userLibraryApi = getUserLibraryApi(api);
 let allItems: any[] = [];
 let selectedIds = new Set<string>();
 let currentUserId = '';
+let proposedTags: string[] = [];
 
 // 2. DOM Elements
 const gridEl = document.getElementById('media-grid') as HTMLDivElement;
@@ -79,10 +82,11 @@ async function fetchItems() {
     try {
         const res = await itemsApi.getItems({
             recursive: true,
-            includeItemTypes: ['Movie', 'Series'],
-            fields: ['Tags', 'ImageTags', 'DateCreated'] as any[]
-        });
+            includeItemTypes: [BaseItemKind.Movie, BaseItemKind.Series] as BaseItemKind[],
+            fields: [ItemFields.Tags, ItemFields.DateCreated] as ItemFields[]
+        }, );
         allItems = res.data.Items || [];
+        
         filterAndRender();
     } catch (err) {
         console.error(err);
@@ -222,17 +226,10 @@ function updateSidebar() {
         });
     });
 
-    // Populate commonTags solely on init for these items (if we just selected items)
-    // For simplicity in Vanilla JS, we will just manage an array of proposedTags globally or recalculate.
-    // We'll calculate tags present exclusively on all selected items:
-    const proposedTags = Object.entries(tagCounts)
-        .filter(([_, count]) => count === selectedItems.length)
-        .map(([t]) => t);
-
-    renderSidebarEditor(proposedTags, tagCounts);
+    renderSidebarEditor(tagCounts);
 }
 
-function renderSidebarEditor(proposedTags: string[], tagCounts: Record<string, number>) {
+function renderSidebarEditor(tagCounts: Record<string, number>) {
     const selectedItems = allItems.filter(i => selectedIds.has(i.Id));
     const isMobile = window.innerWidth <= 768;
 
@@ -320,7 +317,7 @@ function renderSidebarEditor(proposedTags: string[], tagCounts: Record<string, n
         const val = input.value.trim();
         if (val && !proposedTags.includes(val)) {
             proposedTags.push(val);
-            renderSidebarEditor(proposedTags, tagCounts);
+            renderSidebarEditor(tagCounts);
         }
     });
 
@@ -328,7 +325,7 @@ function renderSidebarEditor(proposedTags: string[], tagCounts: Record<string, n
         el.addEventListener('click', (e) => {
             const tag = (e.currentTarget as HTMLElement).getAttribute('data-remove-tag')!;
             proposedTags.splice(proposedTags.indexOf(tag), 1);
-            renderSidebarEditor(proposedTags, tagCounts);
+            renderSidebarEditor(tagCounts);
         });
     });
 
@@ -337,7 +334,7 @@ function renderSidebarEditor(proposedTags: string[], tagCounts: Record<string, n
             const tag = (e.currentTarget as HTMLElement).getAttribute('data-add-tag')!;
             if (!proposedTags.includes(tag)) {
                 proposedTags.push(tag);
-                renderSidebarEditor(proposedTags, tagCounts);
+                renderSidebarEditor(tagCounts);
             }
         });
     });
