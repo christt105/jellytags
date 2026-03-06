@@ -47,7 +47,7 @@ Access the interface at `http://localhost:8181`.
 
 ### 1. Clone the repository
 ```bash
-git clone https://github.com/yourusername/jellytags.git
+git clone https://github.com/christt105/jellytags.git
 cd jellytags
 ```
 
