@@ -64,7 +64,7 @@ async function fetchItems() {
             fields: ['Tags', 'ImageTags', 'DateCreated'] as any[]
         });
         allItems = res.data.Items || [];
-        renderGrid(allItems);
+        filterAndRender();
     } catch (err) {
         console.error(err);
         loadingEl.innerHTML = `<h3 style="color: #ff4d4f">Error fetching items. Check console.</h3>`;
@@ -208,6 +208,8 @@ function updateSidebar() {
 }
 
 function renderSidebarEditor(proposedTags: string[], tagCounts: Record<string, number>) {
+    const selectedItems = allItems.filter(i => selectedIds.has(i.Id));
+
     sidebarEl.innerHTML = `
         <div>
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
@@ -221,7 +223,6 @@ function renderSidebarEditor(proposedTags: string[], tagCounts: Record<string, n
             </button>
         </div>
 
-        <div style="flex: 1;">
             <h4 style="font-size: 0.9rem; margin-bottom: 12px; color: var(--text-muted);">Tags to Apply</h4>
             <div id="proposed-tags-container" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px;">
                 ${proposedTags.length === 0 ? '<span style="font-size: 0.85rem; color: var(--glass-border);">No tags</span>' : ''}
@@ -256,6 +257,28 @@ function renderSidebarEditor(proposedTags: string[], tagCounts: Record<string, n
         <button id="apply-btn" class="glass-button" style="width: 100%;">
             Apply to ${selectedIds.size} Items
         </button>
+
+        <div style="flex: 1; overflow-y: auto;">
+            <h4 style="font-size: 0.9rem; margin-bottom: 12px; color: var(--text-muted);">Selected Items</h4>
+            <div id="selected-items-list" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px; max-height: 240px; overflow-y: auto;">
+                ${selectedItems.map(item => {
+                    let thumbHtml = `<div style="width: 36px; height: 36px; background: rgba(0,0,0,0.3); border-radius: 4px; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 0.7rem;">${item.Type === 'Movie' ? 'M' : 'S'}</div>`;
+                    if (item.ImageTags && item.ImageTags.Primary) {
+                        const thumbUrl = `${serverUrl}/Items/${item.Id}/Images/Primary?tag=${item.ImageTags.Primary}&maxWidth=80`;
+                        thumbHtml = `<img src="${thumbUrl}" style="width: 36px; height: 36px; object-fit: cover; border-radius: 4px;" />`;
+                    }
+                    return `
+                        <div data-deselect="${item.Id}" style="display: flex; align-items: center; gap: 10px; padding: 6px; background: rgba(0,0,0,0.2); border-radius: 6px; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(0,0,0,0.2)'">
+                            ${thumbHtml}
+                            <div style="flex: 1; min-width: 0;">
+                                <div style="font-size: 0.85rem; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${item.Name}</div>
+                                <div style="font-size: 0.7rem; color: var(--text-muted);">${item.Type}</div>
+                            </div>
+                            <span style="color: var(--text-muted); font-size: 1rem;">&times;</span>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
     `;
 
     document.getElementById('clear-btn')?.addEventListener('click', clearSelection);
@@ -285,6 +308,14 @@ function renderSidebarEditor(proposedTags: string[], tagCounts: Record<string, n
                 proposedTags.push(tag);
                 renderSidebarEditor(proposedTags, tagCounts);
             }
+        });
+    });
+
+    document.querySelectorAll('[data-deselect]').forEach(el => {
+        el.addEventListener('click', (e) => {
+            const id = (e.currentTarget as HTMLElement).getAttribute('data-deselect')!;
+            selectedIds.delete(id);
+            filterAndRender();
         });
     });
 
