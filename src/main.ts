@@ -5,7 +5,6 @@ import { getSystemApi } from '@jellyfin/sdk/lib/utils/api/system-api';
 import { getUserApi } from '@jellyfin/sdk/lib/utils/api/user-api';
 import { getUserLibraryApi } from '@jellyfin/sdk/lib/utils/api/user-library-api';
 import { BaseItemKind, ItemFields } from '@jellyfin/sdk/lib/generated-client/models';
-import type { ItemsApi } from '@jellyfin/sdk/lib/generated-client/api/items-api';
 
 // 1. Initialize SDK
 const jellyfin = new Jellyfin({
