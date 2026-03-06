@@ -71,7 +71,7 @@ async function init() {
 
         await fetchItems();
     } catch (e) {
-        loadingEl.innerHTML = `<h3 style="color: #ff4d4f">Connection Failed. Check your .env file and ensure the Jellyfin server is running.</h3>`;
+        loadingEl.innerHTML = `<h3 class="error-message">Connection Failed. Check your .env file and ensure the Jellyfin server is running.</h3>`;
     }
 }
 
@@ -84,13 +84,13 @@ async function fetchItems() {
             recursive: true,
             includeItemTypes: [BaseItemKind.Movie, BaseItemKind.Series] as BaseItemKind[],
             fields: [ItemFields.Tags, ItemFields.DateCreated] as ItemFields[]
-        }, );
+        },);
         allItems = res.data.Items || [];
-        
+
         filterAndRender();
     } catch (err) {
         console.error(err);
-        loadingEl.innerHTML = `<h3 style="color: #ff4d4f">Error fetching items. Check console.</h3>`;
+        loadingEl.innerHTML = `<h3 class="error-message">Error fetching items. Check console.</h3>`;
     }
 }
 
@@ -112,40 +112,31 @@ function renderGrid(itemsToRender: any[]) {
         const isSelected = selectedIds.has(item.Id);
 
         const card = document.createElement('div');
-        card.className = 'glass-panel';
-        card.style.padding = '12px';
-        card.style.cursor = 'pointer';
-        card.style.display = 'flex';
-        card.style.flexDirection = 'column';
-        card.style.transform = isSelected ? 'scale(1.05)' : 'scale(1)';
-        card.style.borderColor = isSelected ? 'var(--jelly-blue)' : 'var(--glass-border)';
-        card.style.boxShadow = isSelected ? '0 0 20px rgba(0, 164, 220, 0.4)' : 'var(--glass-shadow)';
-        card.style.transition = 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)';
-        card.style.position = 'relative';
+        card.className = isSelected ? 'glass-panel media-card selected' : 'glass-panel media-card';
 
         card.onclick = () => toggleSelection(item.Id);
 
-        let imgHtml = `<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: var(--text-muted)">No Image</div>`;
+        let imgHtml = `<div class="media-no-image">No Image</div>`;
         if (item.ImageTags && item.ImageTags.Primary) {
             const imageUrl = `${serverUrl}/Items/${item.Id}/Images/Primary?tag=${item.ImageTags.Primary}&maxWidth=400`;
-            imgHtml = `<img src="${imageUrl}" style="width: 100%; height: 100%; object-fit: cover;" loading="lazy" />`;
+            imgHtml = `<img src="${imageUrl}" class="media-image" loading="lazy" />`;
         }
 
         const tagsHtml = (item.Tags || []).map((t: string) =>
-            `<span style="background: rgba(170, 92, 195, 0.2); color: #e5b3fe; padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; white-space: nowrap;">${t}</span>`
+            `<span class="media-tag">${t}</span>`
         ).join('');
 
-        const checkHtml = isSelected ? `<div style="position: absolute; top: -10px; right: -10px; background: var(--jelly-blue); color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 10px rgba(0,0,0,0.3); font-weight: bold; z-index: 10;">✓</div>` : '';
+        const checkHtml = isSelected ? `<div class="media-card-check">✓</div>` : '';
 
         card.innerHTML = `
             ${checkHtml}
-            <div style="width: 100%; aspect-ratio: 2/3; background: rgba(0,0,0,0.3); border-radius: 8px; overflow: hidden; margin-bottom: 12px;">
+            <div class="media-card-image-wrapper">
                 ${imgHtml}
             </div>
-            <div style="flex: 1; display: flex; flex-direction: column;">
-                <div style="font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">${item.Name}</div>
-                <div style="font-size: 0.8rem; color: var(--text-muted);">${item.Type}</div>
-                <div style="margin-top: auto; padding-top: 8px; display: flex; flex-wrap: wrap; gap: 4px;">
+            <div class="media-card-info">
+                <div class="media-card-title">${item.Name}</div>
+                <div class="media-card-type">${item.Type}</div>
+                <div class="media-card-tags">
                     ${tagsHtml}
                 </div>
             </div>
@@ -204,11 +195,11 @@ function filterAndRender() {
 function updateSidebar() {
     if (selectedIds.size === 0) {
         sidebarEl.innerHTML = `
-            <div class="sidebar-header" style="display: flex; justify-content: space-between; align-items: center;">
-                <h3 style="color: var(--text-main); margin-bottom: 16px;">Tag Editor</h3>
-                <button id="sidebar-close" class="mobile-only" style="display: none; background: none; border: none; color: var(--text-muted); font-size: 1.5rem; cursor: pointer;">&times;</button>
+            <div class="sidebar-header">
+                <h3 class="sidebar-title">Tag Editor</h3>
+                <button id="sidebar-close" class="sidebar-close-btn mobile-only">&times;</button>
             </div>
-            <p class="sidebar-empty-msg" style="font-size: 0.9rem;">Select items from the grid to edit their tags.</p>
+            <p class="sidebar-empty-msg">Select items from the grid to edit their tags.</p>
         `;
         const closeBtn = document.getElementById('sidebar-close');
         closeBtn?.addEventListener('click', closeSidebar);
@@ -235,75 +226,75 @@ function renderSidebarEditor(tagCounts: Record<string, number>) {
 
     sidebarEl.innerHTML = `
         <div>
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                <h3 style="margin: 0; color: var(--text-main)">Edit Tags</h3>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <span style="font-size: 0.8rem; background: var(--jelly-blue); color: white; padding: 2px 8px; border-radius: 12px; font-weight: bold;">
+            <div class="sidebar-top-bar">
+                <h3 class="sidebar-title" style="margin: 0;">Edit Tags</h3>
+                <div class="sidebar-actions-group">
+                    <span class="sidebar-selection-count">
                         ${selectedIds.size} selected
                     </span>
-                    ${isMobile ? '<button id="sidebar-close" style="background: none; border: none; color: var(--text-muted); font-size: 1.5rem; cursor: pointer; padding: 0;">&times;</button>' : ''}
+                    ${isMobile ? '<button id="sidebar-close" class="sidebar-close-btn">&times;</button>' : ''}
                 </div>
             </div>
-            <button id="clear-btn" style="background: transparent; border: 1px solid var(--glass-border); color: var(--text-muted); padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; width: 100%;">
+            <button id="clear-btn" class="clear-btn">
                 Clear Selection
             </button>
         </div>
 
-            <h4 style="font-size: 0.9rem; margin-bottom: 12px; color: var(--text-muted);">Tags to Apply</h4>
-            <div id="proposed-tags-container" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px;">
-                ${proposedTags.length === 0 ? '<span style="font-size: 0.85rem; color: var(--glass-border);">No tags</span>' : ''}
+            <h4 class="section-subtitle">Tags to Apply</h4>
+            <div id="proposed-tags-container" class="proposed-tags-container">
+                ${proposedTags.length === 0 ? '<span class="no-tags-msg">No tags</span>' : ''}
                 ${proposedTags.map(t => `
-                    <div style="background: rgba(170, 92, 195, 0.2); color: #e5b3fe; padding: 4px 10px; border-radius: 16px; font-size: 0.85rem; display: flex; align-items: center; gap: 6px;">
+                    <div class="proposed-tag">
                         ${t}
-                        <span data-remove-tag="${t}" style="cursor: pointer; font-weight: bold; color: white; opacity: 0.7;">&times;</span>
+                        <span data-remove-tag="${t}" class="proposed-tag-remove">&times;</span>
                     </div>
                 `).join('')}
             </div>
 
-            <form id="add-tag-form" style="display: flex; gap: 8px;">
+            <form id="add-tag-form" class="add-tag-form">
                 <input id="new-tag-input" type="text" class="glass-input" placeholder="Add new tag..." autocomplete="off" />
-                <button type="submit" class="glass-button" style="padding: 8px 16px;">+</button>
+                <button type="submit" class="glass-button add-tag-btn">+</button>
             </form>
 
             ${Object.keys(tagCounts).length > 0 ? `
-                <div style="margin-top: 24px;">
-                    <h4 style="font-size: 0.85rem; margin-bottom: 8px; color: var(--text-muted);">Existing Tags in Selection:</h4>
-                    <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+                <div class="existing-tags-section">
+                    <h4 class="existing-tags-title">Existing Tags in Selection:</h4>
+                    <div class="existing-tags-list">
                         ${Object.entries(tagCounts).map(([t, count]) => `
-                            <span data-add-tag="${t}" title="Present on ${count} item(s)" style="font-size: 0.75rem; padding: 2px 6px; background: rgba(255,255,255,0.05); border-radius: 4px; cursor: pointer; border: 1px solid transparent;">
-                                ${t} <span style="opacity: 0.5;">(${count})</span>
+                            <span data-add-tag="${t}" title="Present on ${count} item(s)" class="existing-tag">
+                                ${t} <span class="existing-tag-count">(${count})</span>
                             </span>
                         `).join('')}
                     </div>
-                    <p style="font-size: 0.7rem; color: var(--text-muted); margin-top: 8px;">Click to add to all</p>
+                    <p class="existing-tag-hint">Click to add to all</p>
                 </div>
             ` : ''}
         </div>
 
-        <button id="apply-btn" class="glass-button" style="width: 100%;">
+        <button id="apply-btn" class="glass-button apply-btn">
             Apply to ${selectedIds.size} Items
         </button>
 
-        <div style="flex: 1; overflow-y: auto;">
-            <h4 style="font-size: 0.9rem; margin-bottom: 12px; color: var(--text-muted);">Selected Items</h4>
-            <div id="selected-items-list" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px; max-height: 240px; overflow-y: auto;">
+        <div class="selected-items-section">
+            <h4 class="section-subtitle">Selected Items</h4>
+            <div id="selected-items-list" class="selected-items-list">
                 ${selectedItems.map(item => {
-                    let thumbHtml = `<div style="width: 36px; height: 36px; background: rgba(0,0,0,0.3); border-radius: 4px; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 0.7rem;">${item.Type === 'Movie' ? 'M' : 'S'}</div>`;
-                    if (item.ImageTags && item.ImageTags.Primary) {
-                        const thumbUrl = `${serverUrl}/Items/${item.Id}/Images/Primary?tag=${item.ImageTags.Primary}&maxWidth=80`;
-                        thumbHtml = `<img src="${thumbUrl}" style="width: 36px; height: 36px; object-fit: cover; border-radius: 4px;" />`;
-                    }
-                    return `
-                        <div data-deselect="${item.Id}" style="display: flex; align-items: center; gap: 10px; padding: 6px; background: rgba(0,0,0,0.2); border-radius: 6px; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(0,0,0,0.2)'">
+        let thumbHtml = `<div class="selected-item-thumb-placeholder">${item.Type === 'Movie' ? 'M' : 'S'}</div>`;
+        if (item.ImageTags && item.ImageTags.Primary) {
+            const thumbUrl = `${serverUrl}/Items/${item.Id}/Images/Primary?tag=${item.ImageTags.Primary}&maxWidth=80`;
+            thumbHtml = `<img src="${thumbUrl}" class="selected-item-thumb-img" />`;
+        }
+        return `
+                        <div data-deselect="${item.Id}" class="selected-item-card">
                             ${thumbHtml}
-                            <div style="flex: 1; min-width: 0;">
-                                <div style="font-size: 0.85rem; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${item.Name}</div>
-                                <div style="font-size: 0.7rem; color: var(--text-muted);">${item.Type}</div>
+                            <div class="selected-item-info">
+                                <div class="selected-item-name">${item.Name}</div>
+                                <div class="selected-item-type">${item.Type}</div>
                             </div>
-                            <span style="color: var(--text-muted); font-size: 1rem;">&times;</span>
+                            <span class="selected-item-remove">&times;</span>
                         </div>
                     `;
-                }).join('')}
+    }).join('')}
             </div>
     `;
 
@@ -351,7 +342,7 @@ function renderSidebarEditor(tagCounts: Record<string, number>) {
         const btn = e.currentTarget as HTMLButtonElement;
         btn.innerText = 'Saving...';
         btn.disabled = true;
-        btn.style.opacity = '0.7';
+        btn.classList.add('apply-btn-disabled');
 
         try {
             const ids = Array.from(selectedIds);
@@ -377,7 +368,7 @@ function renderSidebarEditor(tagCounts: Record<string, number>) {
         } finally {
             btn.innerText = `Apply to ${selectedIds.size} Items`;
             btn.disabled = false;
-            btn.style.opacity = '1';
+            btn.classList.remove('apply-btn-disabled');
         }
     });
 }
