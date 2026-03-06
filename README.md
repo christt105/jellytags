@@ -26,11 +26,11 @@ Create a `docker-compose.yml` file anywhere on your server, or clone this reposi
 ```yaml
 services:
   jellytags:
-    build: . # or use an image if published
+    image: christt105/jellytags:latest
     container_name: jellytags
     restart: unless-stopped
     ports:
-      - "8080:80"
+      - "8181:80"
     environment:
       - VITE_JELLYFIN_URL=http://your-jellyfin-server-ip:8096
       - VITE_JELLYFIN_TOKEN=your_admin_api_token
@@ -41,7 +41,7 @@ Run the following command:
 ```bash
 docker-compose up -d
 ```
-Access the interface at `http://localhost:8080`.
+Access the interface at `http://localhost:8181`.
 
 ## Installation (Local Development)
 
