@@ -7,13 +7,15 @@ import { getUserLibraryApi } from '@jellyfin/sdk/lib/utils/api/user-library-api'
 import { BaseItemKind, ItemFields } from '@jellyfin/sdk/lib/generated-client/models';
 
 // 1. Initialize SDK
+const credentials = JSON.parse(localStorage.getItem("jellyfin_credentials"))["Servers"][0]
+
 const jellyfin = new Jellyfin({
     clientInfo: { name: 'JellyTags', version: '1.0.0' },
-    deviceInfo: { name: 'Browser', id: 'browser-uuid' }
+    deviceInfo: { name: 'Browser', id: credentials["Id"] }
 });
 
-const serverUrl = import.meta.env.VITE_JELLYFIN_URL;
-const token = import.meta.env.VITE_JELLYFIN_TOKEN;
+const serverUrl = credentials["ManualAddress"]
+const token = credentials["AccessToken"]
 
 const api = jellyfin.createApi(serverUrl);
 api.accessToken = token;
