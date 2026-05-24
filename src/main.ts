@@ -58,6 +58,7 @@ const searchInput = document.getElementById('search-input') as HTMLInputElement;
 const refreshBtn = document.getElementById('refresh-btn') as HTMLButtonElement;
 const selectAllBtn = document.getElementById('select-all-btn') as HTMLButtonElement;
 const sortSelect = document.getElementById('sort-select') as HTMLSelectElement;
+const userSelect = document.getElementById('user-select') as HTMLSelectElement;
 const sourceLibrarySelect = document.getElementById('source-library-select') as HTMLSelectElement;
 const parentalRatingSelect = document.getElementById('parental-rating-select') as HTMLSelectElement;
 const sidebarToggle = document.getElementById('sidebar-toggle') as HTMLButtonElement;
@@ -89,7 +90,21 @@ async function init() {
             throw new Error("No users found. Ensure your API Token has admin permissions.");
         }
 
-        currentUserId = usersRes.data[0].Id as string;
+        userSelect.innerHTML = usersRes.data.map(u => `<option value="${u.Id}">${u.Name}</option>`).join('');
+        
+        const prvUser = usersRes.data.find(u => u.Name === 'prv');
+        if (prvUser) {
+            userSelect.value = prvUser.Id as string;
+            currentUserId = prvUser.Id as string;
+        } else {
+            currentUserId = usersRes.data[0].Id as string;
+            userSelect.value = currentUserId;
+        }
+
+        userSelect.addEventListener('change', () => {
+            currentUserId = userSelect.value;
+            fetchItems();
+        });
 
         await fetchItems();
     } catch (e) {
@@ -117,7 +132,7 @@ async function fetchItems() {
             const fallbackRes = await itemsApi.getItems({
                 userId: currentUserId,
                 recursive: true,
-                includeItemTypes: [BaseItemKind.Movie, BaseItemKind.Series] as BaseItemKind[],
+                includeItemTypes: ['Movie', 'Series', 'Video'] as BaseItemKind[],
                 fields: [ItemFields.Tags, ItemFields.DateCreated] as ItemFields[]
             });
 
@@ -131,7 +146,7 @@ async function fetchItems() {
                     userId: currentUserId,
                     parentId: library.id,
                     recursive: true,
-                    includeItemTypes: [BaseItemKind.Movie, BaseItemKind.Series] as BaseItemKind[],
+                    includeItemTypes: ['Movie', 'Series', 'Video'] as BaseItemKind[],
                     fields: [ItemFields.Tags, ItemFields.DateCreated] as ItemFields[]
                 });
 
@@ -398,7 +413,7 @@ function renderSidebarEditor(tagCounts: Record<string, number>) {
             <h4 class="section-subtitle">Selected Items</h4>
             <div id="selected-items-list" class="selected-items-list">
                 ${selectedItems.map(item => {
-        let thumbHtml = `<div class="selected-item-thumb-placeholder">${item.Type === 'Movie' ? 'M' : 'S'}</div>`;
+        let thumbHtml = `<div class="selected-item-thumb-placeholder">${item.Type === 'Movie' ? 'M' : item.Type === 'Series' ? 'S' : 'V'}</div>`;
         if (item.ImageTags && item.ImageTags.Primary) {
             const thumbUrl = `${serverUrl}/Items/${item.Id}/Images/Primary?tag=${item.ImageTags.Primary}&maxWidth=80`;
             thumbHtml = `<img src="${thumbUrl}" class="selected-item-thumb-img" />`;
