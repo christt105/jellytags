@@ -51,6 +51,11 @@ let currentUserId = '';
 let proposedTags: string[] = [];
 let proposedGenres: string[] = [];
 
+// Tag filter: tags in `includeTagFilters` must be present on an item, tags in
+// `excludeTagFilters` must be absent. A tag can only be in one set at a time.
+let includeTagFilters = new Set<string>();
+let excludeTagFilters = new Set<string>();
+
 // Which metadata field the sidebar edits. Tags and genres share the same editor.
 type EditField = 'Tags' | 'Genres';
 let editTarget: EditField = 'Tags';
@@ -93,6 +98,11 @@ const sourceLibrarySelect = document.getElementById('source-library-select') as 
 const parentalRatingSelect = document.getElementById('parental-rating-select') as HTMLSelectElement;
 const sidebarToggle = document.getElementById('sidebar-toggle') as HTMLButtonElement;
 const sidebarClose = document.getElementById('sidebar-close') as HTMLButtonElement;
+const tagFilterToggle = document.getElementById('tag-filter-toggle') as HTMLButtonElement;
+const tagFilterPanel = document.getElementById('tag-filter-panel') as HTMLDivElement;
+const tagFilterList = document.getElementById('tag-filter-list') as HTMLDivElement;
+const tagFilterCount = document.getElementById('tag-filter-count') as HTMLSpanElement;
+const tagFilterClear = document.getElementById('tag-filter-clear') as HTMLButtonElement;
 
 function openSidebar() {
     sidebarEl.classList.add('open');
@@ -118,6 +128,85 @@ filtersToggle?.addEventListener('click', () => {
     headerActions?.classList.toggle('show');
     filtersToggle.classList.toggle('active');
 });
+
+function openTagFilterPanel() {
+    tagFilterPanel.classList.add('open');
+    tagFilterToggle.classList.add('active');
+}
+
+function closeTagFilterPanel() {
+    tagFilterPanel.classList.remove('open');
+    tagFilterToggle.classList.remove('active');
+}
+
+tagFilterToggle.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (tagFilterPanel.classList.contains('open')) {
+        closeTagFilterPanel();
+    } else {
+        openTagFilterPanel();
+    }
+});
+
+tagFilterPanel.addEventListener('click', (e) => e.stopPropagation());
+
+document.addEventListener('click', () => closeTagFilterPanel());
+
+tagFilterClear.addEventListener('click', () => {
+    includeTagFilters.clear();
+    excludeTagFilters.clear();
+    renderTagFilterPanel();
+    filterAndRender();
+});
+
+// Every known tag across the whole library, independent of the current
+// filters, so a tag stays choosable even while it's actively excluded.
+function getAllKnownTags(): string[] {
+    const tags = new Set<string>();
+    allItems.forEach(item => (item.Tags || []).forEach(t => tags.add(t)));
+    return Array.from(tags).sort((a, b) => a.localeCompare(b));
+}
+
+// Cycles a tag through: unfiltered -> must have -> must not have -> unfiltered.
+function cycleTagFilter(tag: string) {
+    if (includeTagFilters.has(tag)) {
+        includeTagFilters.delete(tag);
+        excludeTagFilters.add(tag);
+    } else if (excludeTagFilters.has(tag)) {
+        excludeTagFilters.delete(tag);
+    } else {
+        includeTagFilters.add(tag);
+    }
+    renderTagFilterPanel();
+    filterAndRender();
+}
+
+function renderTagFilterPanel() {
+    const knownTags = getAllKnownTags();
+    const activeCount = includeTagFilters.size + excludeTagFilters.size;
+
+    tagFilterCount.textContent = String(activeCount);
+    tagFilterCount.classList.toggle('visible', activeCount > 0);
+    tagFilterToggle.classList.toggle('active', activeCount > 0);
+
+    if (knownTags.length === 0) {
+        tagFilterList.innerHTML = `<span class="tag-filter-empty-msg">No tags in your library yet.</span>`;
+        return;
+    }
+
+    tagFilterList.innerHTML = knownTags.map(tag => {
+        const state = includeTagFilters.has(tag) ? 'include' : excludeTagFilters.has(tag) ? 'exclude' : '';
+        const prefix = state === 'include' ? '✓ ' : state === 'exclude' ? '✗ ' : '';
+        return `<span data-tag-filter="${escapeHtml(tag)}" class="tag-filter-chip ${state}">${prefix}${escapeHtml(tag)}</span>`;
+    }).join('');
+
+    tagFilterList.querySelectorAll('[data-tag-filter]').forEach(el => {
+        el.addEventListener('click', (e) => {
+            const tag = (e.currentTarget as HTMLElement).getAttribute('data-tag-filter')!;
+            cycleTagFilter(tag);
+        });
+    });
+}
 
 // 3. Core Logic
 async function init() {
@@ -195,6 +284,7 @@ async function fetchItems() {
 
         allItems = Array.from(allItemsById.values());
         renderParentalRatingFilterOptions();
+        renderTagFilterPanel();
 
         filterAndRender();
     } catch (err) {
@@ -311,14 +401,17 @@ function filterAndRender() {
     const selectedLibraryId = sourceLibrarySelect.value;
     const selectedParentalRating = parentalRatingSelect.value;
 
-    let filtered = allItems.filter(i =>
-        (selectedLibraryId === 'all' || i.SourceLibraryId === selectedLibraryId) &&
-        (selectedParentalRating === 'all' || (i.OfficialRating || '').trim() === selectedParentalRating) &&
-        (
-            (i.Name || '').toLowerCase().includes(q) ||
-            (i.Tags && i.Tags.some((t: string) => t.toLowerCase().includes(q)))
-        )
-    );
+    let filtered = allItems.filter(i => {
+        const itemTags = i.Tags || [];
+        return (selectedLibraryId === 'all' || i.SourceLibraryId === selectedLibraryId) &&
+            (selectedParentalRating === 'all' || (i.OfficialRating || '').trim() === selectedParentalRating) &&
+            (
+                (i.Name || '').toLowerCase().includes(q) ||
+                itemTags.some((t: string) => t.toLowerCase().includes(q))
+            ) &&
+            Array.from(includeTagFilters).every(t => itemTags.includes(t)) &&
+            Array.from(excludeTagFilters).every(t => !itemTags.includes(t));
+    });
 
     const sortVal = sortSelect.value;
     filtered.sort((a, b) => {

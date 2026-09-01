@@ -143,6 +143,9 @@ select.glass-input option {
   border-radius: 16px;
   flex-wrap: wrap;
   gap: 12px;
+  /* backdrop-filter makes this its own stacking context; without a z-index
+     it paints below .main-layout and traps the tag filter dropdown under the grid. */
+  z-index: 5;
 }
 
 .header-title-group {
@@ -200,6 +203,109 @@ select.glass-input option {
   font-size: 0.9rem;
   background: rgba(255, 255, 255, 0.1);
   box-shadow: none;
+}
+
+.tag-filter-wrapper {
+  position: relative;
+}
+
+.tag-filter-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tag-filter-count {
+  display: none;
+  background: var(--jelly-blue);
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 10px;
+}
+
+.tag-filter-count.visible {
+  display: inline-block;
+}
+
+.tag-filter-toggle-btn.active {
+  background: linear-gradient(135deg, var(--jelly-blue), var(--jelly-purple));
+}
+
+.tag-filter-panel {
+  display: none;
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 280px;
+  max-height: 360px;
+  overflow-y: auto;
+  z-index: 20;
+  padding: 16px;
+}
+
+.tag-filter-panel.open {
+  display: block;
+}
+
+.tag-filter-hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin: 0 0 12px;
+}
+
+.tag-filter-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.tag-filter-chip {
+  font-size: 0.75rem;
+  padding: 4px 10px;
+  border-radius: 12px;
+  cursor: pointer;
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.05);
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.tag-filter-chip:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.tag-filter-chip.include {
+  background: rgba(64, 200, 130, 0.2);
+  color: #7dfab0;
+  border-color: rgba(64, 200, 130, 0.6);
+}
+
+.tag-filter-chip.exclude {
+  background: rgba(220, 70, 70, 0.2);
+  color: #ff9d9d;
+  border-color: rgba(220, 70, 70, 0.6);
+}
+
+.tag-filter-empty-msg {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.tag-filter-clear-btn {
+  width: 100%;
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  color: var(--text-main);
+  cursor: pointer;
+}
+
+.tag-filter-clear-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
 }
 
 /* Footer */
@@ -677,6 +783,26 @@ select.glass-input option {
   .header-actions > * {
     flex: 1 1 calc(50% - 5px);
     min-width: 0 !important;
+  }
+
+  .tag-filter-toggle-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .tag-filter-wrapper {
+    /* .header-actions > * stretches this to 50% width via flex-basis; the
+       toggle button below it must not inherit that or it'll only cover half
+       the row while the panel (anchored to this wrapper) stays centered. */
+    flex-basis: 100% !important;
+  }
+
+  .tag-filter-panel {
+    left: 50%;
+    right: auto;
+    width: min(90vw, 320px);
+    max-height: 50vh;
+    transform: translateX(-50%);
   }
 
   #filters-toggle.active {
