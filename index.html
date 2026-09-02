@@ -43,6 +43,16 @@
           <option value="date-desc" selected>Date Added (Newest)</option>
           <option value="date-asc">Date Added (Oldest)</option>
         </select>
+        <div id="tag-filter-wrapper" class="tag-filter-wrapper">
+          <button id="tag-filter-toggle" type="button" class="glass-button header-button tag-filter-toggle-btn">
+            Tags <span id="tag-filter-count" class="tag-filter-count"></span>
+          </button>
+          <div id="tag-filter-panel" class="glass-panel tag-filter-panel">
+            <p class="tag-filter-hint">Click a tag to require it, click again to exclude it, once more to reset.</p>
+            <div id="tag-filter-list" class="tag-filter-list"></div>
+            <button id="tag-filter-clear" type="button" class="tag-filter-clear-btn">Clear tag filters</button>
+          </div>
+        </div>
         <button id="select-all-btn" class="glass-button header-button">
           Select All
         </button>

@@ -17,6 +17,7 @@ JellyTags is a lightweight, responsive web application for managing tags within 
 - **Tag Suggestions:** View existing tags across your selection and easily propose new or current ones.
 - **Responsive Design:** A mobile-friendly sliding sidebar allows you to manage tags on the go.
 - **Sorting & Filtering:** Find specific media quickly using the built-in search bar and sorting dropdown.
+- **Tag Filtering:** Filter the grid by tag, either to items that have a tag or to items missing it, useful for finding what still needs tagging.
 
 ## Requirements
 - A [Jellyfin](https://jellyfin.org/) server.
