@@ -243,6 +243,10 @@ select.glass-input option {
   overflow-y: auto;
   z-index: 20;
   padding: 16px;
+  /* Floats over the media grid, unlike the docked glass-panel this class
+     borrows from; the default 5% opacity left the grid's poster art
+     bleeding through and made the chips hard to read. */
+  background: rgba(13, 17, 23, 0.96);
 }
 
 .tag-filter-panel.open {
