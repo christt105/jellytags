@@ -1,7 +1,11 @@
 import { defineConfig, loadEnv } from 'vite'
 
-export default defineConfig(({ mode }) => {
+export default defineConfig(({ command, mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
+
+  if (command === 'serve' && !env.VITE_JELLYFIN_URL) {
+    throw new Error('VITE_JELLYFIN_URL must be set (e.g. in .env) for the dev proxy to reach Jellyfin.')
+  }
 
   return {
     server: {

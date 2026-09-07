@@ -13,12 +13,9 @@ server {
     # index.html and sw.js point at the current release's (content-hashed)
     # asset URLs, so they must revalidate on every load or a redeploy can
     # keep serving a stale index.html that points at a previous release's
-    # assets.
+    # assets. `index index.html;` internally redirects `/` to `/index.html`
+    # before location matching, so a single rule covers both.
     # no-cache (not no-store) still lets nginx answer cheap 304s via ETag.
-    location = / {
-        add_header Cache-Control "no-cache" always;
-    }
-
     location = /index.html {
         add_header Cache-Control "no-cache" always;
     }
@@ -43,12 +40,27 @@ server {
         add_header Cache-Control "no-cache" always;
     }
 
+    # Re-resolve the upstream on every request instead of caching its IP for
+    # the life of the nginx process, which would otherwise wedge the proxy
+    # after Jellyfin's container gets recreated with a new address.
+    resolver 127.0.0.11 valid=30s;
+    set $jellyfin_upstream ${VITE_JELLYFIN_URL};
+
     # Same-origin reverse proxy to Jellyfin: the browser never talks to
     # Jellyfin directly, so there's no cross-origin request and the admin
-    # token never reaches the client bundle.
+    # token never reaches the client bundle. The rewrite (rather than a URI
+    # on proxy_pass) avoids a doubled slash if VITE_JELLYFIN_URL is set with
+    # a trailing one.
     location /jellyfin/ {
-        proxy_pass ${VITE_JELLYFIN_URL}/;
-        proxy_set_header Host $host;
+        rewrite ^/jellyfin/(.*)$ /$1 break;
+        proxy_pass $jellyfin_upstream;
+        # Jellyfin builds absolute URLs for its own redirects (some image and
+        # stream endpoints do this) from whatever Host it was sent, which is
+        # never the client-facing /jellyfin path; rewrite both the relative
+        # and absolute forms back onto it so the redirect doesn't escape the
+        # proxy.
+        proxy_redirect / /jellyfin/;
+        proxy_redirect ~^https?://[^/]*(/.*)?$ $scheme://$http_host/jellyfin$1;
         proxy_set_header X-Emby-Token ${VITE_JELLYFIN_TOKEN};
     }
 }
