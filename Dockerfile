@@ -19,14 +19,11 @@ RUN apk upgrade --no-cache
 # Copy built assets
 COPY --from=build /app/dist /usr/share/nginx/html
 
-# Copy nginx config template, rendered at container start (docker-entrypoint.sh)
+# Copy nginx config template. nginx's own entrypoint (docker-entrypoint.d/
+# 20-envsubst-on-templates.sh) renders *.template files under
+# /etc/nginx/templates/ with envsubst automatically before starting, using
+# every defined env var, so $host/$uri and friends are left untouched.
 COPY nginx.conf.template /etc/nginx/templates/default.conf.template
-
-# Copy entrypoint script
-COPY docker-entrypoint.sh /
-RUN chmod +x /docker-entrypoint.sh
 
 # Expose port 80
 EXPOSE 80
-
-CMD ["/docker-entrypoint.sh"]
