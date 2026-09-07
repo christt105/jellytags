@@ -11,10 +11,9 @@ server {
     gzip_types text/plain text/css text/javascript application/javascript application/json application/manifest+json image/svg+xml;
 
     # index.html, the JS/CSS bundles, sw.js and the manifest are all served
-    # under unhashed filenames (vite.config.ts disables content hashing;
-    # enabling it is a separate follow-up), so they must revalidate on every
-    # load or a redeploy silently keeps serving the previous release out of
-    # the browser's heuristic cache.
+    # under unhashed filenames, so they must revalidate on every load or a
+    # redeploy silently keeps serving the previous release out of the
+    # browser's heuristic cache.
     # no-cache (not no-store) still lets nginx answer cheap 304s via ETag.
     location = / {
         add_header Cache-Control "no-cache" always;
@@ -42,9 +41,9 @@ server {
         add_header Cache-Control "no-cache" always;
     }
 
-    # Reverse proxy to Jellyfin, same-origin so the browser never makes a
-    # cross-origin request (fixes CORS, #20). The admin token is injected
-    # here, server-side, instead of being baked into the client bundle.
+    # Same-origin reverse proxy to Jellyfin: the browser never talks to
+    # Jellyfin directly, so there's no cross-origin request and the admin
+    # token never reaches the client bundle.
     location /jellyfin/ {
         proxy_pass ${VITE_JELLYFIN_URL}/;
         proxy_set_header Host $host;

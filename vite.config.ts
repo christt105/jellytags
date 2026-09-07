@@ -7,8 +7,8 @@ export default defineConfig(({ mode }) => {
     server: {
       host: '0.0.0.0',
       port: 8181,
-      // Mirrors the nginx reverse proxy used in production (nginx.conf.template)
-      // so the client can always call the relative /jellyfin path, in dev too.
+      // Same relative path the production nginx proxy exposes, so the client
+      // code doesn't need to know whether it's running against Vite or nginx.
       proxy: {
         '/jellyfin': {
           target: env.VITE_JELLYFIN_URL,

@@ -12,9 +12,9 @@ const jellyfin = new Jellyfin({
     deviceInfo: { name: 'Browser', id: 'browser-uuid' }
 });
 
-// All Jellyfin traffic goes through this same-origin path, proxied by nginx
-// (prod) or Vite (dev). The proxy injects the admin token server-side, so
-// the client never sees it — see nginx.conf.template / vite.config.ts.
+// Same-origin path; a reverse proxy (nginx in prod, Vite in dev) forwards
+// this to the real Jellyfin server and injects the admin token, so the
+// client bundle never contains it.
 const apiBase = '/jellyfin';
 
 const api = jellyfin.createApi(apiBase);
