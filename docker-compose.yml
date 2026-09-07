@@ -6,6 +6,8 @@ services:
     ports:
       - "8181:80"
     environment:
+      # Used only by nginx's reverse proxy (server-side) to reach Jellyfin
+      # and inject the token; the browser never sees either value.
       - VITE_JELLYFIN_URL=http://your-jellyfin-server:8096
       - VITE_JELLYFIN_TOKEN=your-api-token # MUST HAVE ADMIN PRIVILEGES
     # Optionally mount a local env file

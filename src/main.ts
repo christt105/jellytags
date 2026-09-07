@@ -12,11 +12,12 @@ const jellyfin = new Jellyfin({
     deviceInfo: { name: 'Browser', id: 'browser-uuid' }
 });
 
-const serverUrl = import.meta.env.VITE_JELLYFIN_URL;
-const token = import.meta.env.VITE_JELLYFIN_TOKEN;
+// All Jellyfin traffic goes through this same-origin path, proxied by nginx
+// (prod) or Vite (dev). The proxy injects the admin token server-side, so
+// the client never sees it — see nginx.conf.template / vite.config.ts.
+const apiBase = '/jellyfin';
 
-const api = jellyfin.createApi(serverUrl);
-api.accessToken = token;
+const api = jellyfin.createApi(apiBase);
 
 const itemsApi = getItemsApi(api);
 const updateApi = getItemUpdateApi(api);
@@ -346,7 +347,7 @@ function renderGrid(itemsToRender: MediaItem[]) {
 
         let imgHtml = `<div class="media-no-image">No Image</div>`;
         if (item.ImageTags && item.ImageTags.Primary) {
-            const imageUrl = `${serverUrl}/Items/${item.Id}/Images/Primary?tag=${item.ImageTags.Primary}&maxWidth=400`;
+            const imageUrl = `${apiBase}/Items/${item.Id}/Images/Primary?tag=${item.ImageTags.Primary}&maxWidth=400`;
             imgHtml = `<img src="${imageUrl}" class="media-image" loading="lazy" />`;
         }
 
@@ -546,7 +547,7 @@ function renderSidebarEditor(valueCounts: Record<string, number>) {
                 ${selectedItems.map(item => {
         let thumbHtml = `<div class="selected-item-thumb-placeholder">${item.Type === 'Movie' ? 'M' : 'S'}</div>`;
         if (item.ImageTags && item.ImageTags.Primary) {
-            const thumbUrl = `${serverUrl}/Items/${item.Id}/Images/Primary?tag=${item.ImageTags.Primary}&maxWidth=80`;
+            const thumbUrl = `${apiBase}/Items/${item.Id}/Images/Primary?tag=${item.ImageTags.Primary}&maxWidth=80`;
             thumbHtml = `<img src="${thumbUrl}" class="selected-item-thumb-img" />`;
         }
         return `
