@@ -1,8 +1,8 @@
 // Minimal service worker to satisfy PWA installability criteria.
-// JellyTags always needs a live Jellyfin connection, and nginx.conf sets
-// Cache-Control: no-cache on index.html/assets/manifest to avoid serving a
-// stale build after a redeploy, so this intentionally does not cache
-// anything: it just passes every request straight to the network.
+// JellyTags always needs a live Jellyfin connection, and nginx.conf.template
+// already handles caching correctly (no-cache on index.html, long-lived
+// immutable caching on the hashed asset files), so this intentionally does
+// not cache anything itself: it just passes every request to the network.
 
 self.addEventListener('install', () => {
   self.skipWaiting();
