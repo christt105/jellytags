@@ -19,6 +19,9 @@ RUN apk upgrade --no-cache
 # Copy built assets
 COPY --from=build /app/dist /usr/share/nginx/html
 
+# Copy nginx config
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
 # Copy entrypoint script
 COPY docker-entrypoint.sh /
 RUN chmod +x /docker-entrypoint.sh
