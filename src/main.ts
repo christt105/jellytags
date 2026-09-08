@@ -169,8 +169,6 @@ tagFilterClear.addEventListener('click', () => {
     filterAndRender();
 });
 
-// Only re-renders the tag chip list; the media grid doesn't change until a
-// chip is actually clicked.
 tagFilterSearch.addEventListener('input', () => renderTagFilterPanel());
 
 // Every known tag across the whole library, independent of the current
@@ -209,8 +207,6 @@ function renderTagFilterPanel() {
     }
 
     const searchText = tagFilterSearch.value.trim().toLowerCase();
-    // Active filters stay visible even when they don't match the search, so
-    // they can still be reset without first clearing the search box.
     const visibleTags = searchText
         ? knownTags.filter(tag => includeTagFilters.has(tag) || excludeTagFilters.has(tag) || tag.toLowerCase().includes(searchText))
         : knownTags;
