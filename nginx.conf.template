@@ -1,3 +1,17 @@
+# The proxy injects an admin token, so anyone who can reach this port already
+# gets whatever this allowlist lets through with no credential of their own.
+# Keep it to exactly the Jellyfin endpoints JellyTags' frontend calls
+# (src/main.ts), not a general-purpose admin API passthrough.
+map $request_method:$uri $jellyfin_allowed {
+    default 0;
+    "GET:/jellyfin/System/Info/Public" 1;
+    "GET:/jellyfin/Users" 1;
+    "GET:/jellyfin/UserViews" 1;
+    "GET:/jellyfin/Items" 1;
+    "~^GET:/jellyfin/Items/[^/]+/Images/Primary$" 1;
+    "~^POST:/jellyfin/Items/[^/]+$" 1;
+}
+
 server {
     listen 80;
     server_name _;
@@ -52,6 +66,9 @@ server {
     # on proxy_pass) avoids a doubled slash if VITE_JELLYFIN_URL is set with
     # a trailing one.
     location /jellyfin/ {
+        if ($jellyfin_allowed = 0) {
+            return 403;
+        }
         rewrite ^/jellyfin/(.*)$ /$1 break;
         proxy_pass $jellyfin_upstream;
         # Jellyfin builds absolute URLs for its own redirects (some image and
