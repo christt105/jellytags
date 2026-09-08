@@ -259,6 +259,12 @@ select.glass-input option {
   margin: 0 0 12px;
 }
 
+.tag-filter-search-input {
+  padding: 8px 12px;
+  font-size: 0.8rem;
+  margin-bottom: 12px;
+}
+
 .tag-filter-list {
   display: flex;
   flex-wrap: wrap;

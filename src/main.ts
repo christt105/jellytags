@@ -107,6 +107,7 @@ const tagFilterPanel = document.getElementById('tag-filter-panel') as HTMLDivEle
 const tagFilterList = document.getElementById('tag-filter-list') as HTMLDivElement;
 const tagFilterCount = document.getElementById('tag-filter-count') as HTMLSpanElement;
 const tagFilterClear = document.getElementById('tag-filter-clear') as HTMLButtonElement;
+const tagFilterSearch = document.getElementById('tag-filter-search') as HTMLInputElement;
 
 function openSidebar() {
     sidebarEl.classList.add('open');
@@ -141,6 +142,10 @@ function openTagFilterPanel() {
 function closeTagFilterPanel() {
     tagFilterPanel.classList.remove('open');
     tagFilterToggle.classList.remove('active');
+    if (tagFilterSearch.value) {
+        tagFilterSearch.value = '';
+        renderTagFilterPanel();
+    }
 }
 
 tagFilterToggle.addEventListener('click', (e) => {
@@ -159,9 +164,14 @@ document.addEventListener('click', () => closeTagFilterPanel());
 tagFilterClear.addEventListener('click', () => {
     includeTagFilters.clear();
     excludeTagFilters.clear();
+    tagFilterSearch.value = '';
     renderTagFilterPanel();
     filterAndRender();
 });
+
+// Only re-renders the tag chip list; the media grid doesn't change until a
+// chip is actually clicked.
+tagFilterSearch.addEventListener('input', () => renderTagFilterPanel());
 
 // Every known tag across the whole library, independent of the current
 // filters, so a tag stays choosable even while it's actively excluded.
@@ -198,7 +208,19 @@ function renderTagFilterPanel() {
         return;
     }
 
-    tagFilterList.innerHTML = knownTags.map(tag => {
+    const searchText = tagFilterSearch.value.trim().toLowerCase();
+    // Active filters stay visible even when they don't match the search, so
+    // they can still be reset without first clearing the search box.
+    const visibleTags = searchText
+        ? knownTags.filter(tag => includeTagFilters.has(tag) || excludeTagFilters.has(tag) || tag.toLowerCase().includes(searchText))
+        : knownTags;
+
+    if (visibleTags.length === 0) {
+        tagFilterList.innerHTML = `<span class="tag-filter-empty-msg">No tags match your search.</span>`;
+        return;
+    }
+
+    tagFilterList.innerHTML = visibleTags.map(tag => {
         const state = includeTagFilters.has(tag) ? 'include' : excludeTagFilters.has(tag) ? 'exclude' : '';
         const prefix = state === 'include' ? '✓ ' : state === 'exclude' ? '✗ ' : '';
         return `<span data-tag-filter="${escapeHtml(tag)}" class="tag-filter-chip ${state}">${prefix}${escapeHtml(tag)}</span>`;
