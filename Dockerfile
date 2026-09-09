@@ -35,5 +35,17 @@ COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY strip-trailing-slash.envsh /docker-entrypoint.d/05-strip-trailing-slash.envsh
 RUN chmod +x /docker-entrypoint.d/05-strip-trailing-slash.envsh
 
+# nginx.conf.template's resolver directive also comes from a variable, so it
+# can default to the container's actual DNS server (whatever network mode
+# it's running under) instead of hardcoding Docker's embedded DNS, which
+# only exists on a user-defined network. NGINX_ENTRYPOINT_LOCAL_RESOLVERS
+# opts into the base image's own /docker-entrypoint.d/15-local-resolvers.envsh,
+# which populates $NGINX_LOCAL_RESOLVERS from /etc/resolv.conf; our script
+# just carries that (with a fallback) into the VITE_-prefixed var envsubst
+# is scoped to.
+ENV NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1
+COPY detect-resolver.envsh /docker-entrypoint.d/16-detect-resolver.envsh
+RUN chmod +x /docker-entrypoint.d/16-detect-resolver.envsh
+
 # Expose port 80
 EXPOSE 80

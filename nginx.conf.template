@@ -61,7 +61,11 @@ server {
     # Re-resolve the upstream on every request instead of caching its IP for
     # the life of the nginx process, which would otherwise wedge the proxy
     # after Jellyfin's container gets recreated with a new address.
-    resolver 127.0.0.11 valid=30s;
+    # 127.0.0.11 is Docker's embedded DNS, only reachable on a user-defined
+    # network (what `docker compose up` gives you by default). detect-
+    # resolver.envsh substitutes the right nameserver for other setups
+    # (default bridge, host networking) instead.
+    resolver ${VITE_NGINX_RESOLVER} valid=30s;
     set $jellyfin_upstream ${VITE_JELLYFIN_URL};
 
     # Same-origin reverse proxy to Jellyfin: the browser never talks to
