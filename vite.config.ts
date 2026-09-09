@@ -1,27 +1,29 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 
-export default defineConfig(({ command }) => ({
-  server: {
-    host: '0.0.0.0',
-    port: 8181
-  },
-  // For production builds the values are baked as placeholders and swapped in at
-  // container start by docker-entrypoint.sh. In dev we let Vite load the real
-  // values from .env so `npm run dev` can actually connect to Jellyfin.
-  ...(command === 'build' ? {
-    define: {
-      'import.meta.env.VITE_JELLYFIN_URL': '"__JELLYFIN_URL__"',
-      'import.meta.env.VITE_JELLYFIN_TOKEN': '"__JELLYFIN_TOKEN__"',
+export default defineConfig(({ command, mode }) => {
+  const env = loadEnv(mode, process.cwd(), '')
+
+  if (command === 'serve' && !env.VITE_JELLYFIN_URL) {
+    throw new Error('VITE_JELLYFIN_URL must be set (e.g. in .env) for the dev proxy to reach Jellyfin.')
+  }
+
+  return {
+    server: {
+      host: '0.0.0.0',
+      port: 8181,
+      // Same relative path the production nginx proxy exposes, so the client
+      // code doesn't need to know whether it's running against Vite or nginx.
+      proxy: {
+        '/jellyfin': {
+          target: env.VITE_JELLYFIN_URL,
+          changeOrigin: true,
+          headers: { 'X-Emby-Token': env.VITE_JELLYFIN_TOKEN },
+          rewrite: (path) => path.replace(/^\/jellyfin/, ''),
+        },
+      },
     },
-  } : {}),
-  build: {
-    modulePreload: false,
-    rollupOptions: {
-      output: {
-        entryFileNames: `assets/[name].js`,
-        chunkFileNames: `assets/[name].js`,
-        assetFileNames: `assets/[name].[ext]`
-      }
+    build: {
+      modulePreload: false,
     }
   }
-}))
+})

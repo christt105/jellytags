@@ -24,7 +24,10 @@ JellyTags is a lightweight, responsive web application for managing tags within 
 - An API Token from your Jellyfin server with **Administrator** privileges (needed to fetch the admin user's library context and update items).
 
 ## Running via Docker (Recommended)
-You can easily spin up the JellyTags interface using Docker and Docker Compose. Environment variables are substituted at runtime.
+You can easily spin up the JellyTags interface using Docker and Docker Compose. `VITE_JELLYFIN_URL` and `VITE_JELLYFIN_TOKEN` are only used server-side, by nginx's reverse proxy under `/jellyfin`: the browser talks to that same-origin path and never sees the Jellyfin URL or token.
+
+> [!WARNING]
+> Anyone who can reach JellyTags' port gets full **admin** access to your Jellyfin server through `/jellyfin`, without needing any credential of their own: the proxy injects the token for them. Don't expose this port beyond a network you trust.
 
 ### 1. Create a `docker-compose.yml`
 Create a `docker-compose.yml` file anywhere on your server, or clone this repository and modify the existing one.
@@ -68,6 +71,7 @@ To run JellyTags locally, create a `.env` file at the root of the project:
 VITE_JELLYFIN_URL=http://localhost:8096
 VITE_JELLYFIN_TOKEN=your_admin_api_token
 ```
+These are only read by Vite's dev proxy (`server.proxy` in `vite.config.ts`), which mirrors the production nginx reverse proxy: the app itself calls the relative `/jellyfin` path and never reads either value directly.
 
 ### 4. Start the Development Server
 ```bash

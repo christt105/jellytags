@@ -1,0 +1,91 @@
+# The proxy injects an admin token, so anyone who can reach this port already
+# gets whatever this allowlist lets through with no credential of their own.
+# Keep it to exactly the Jellyfin endpoints JellyTags' frontend calls
+# (src/main.ts), not a general-purpose admin API passthrough.
+map $request_method:$uri $jellyfin_allowed {
+    default 0;
+    # map's plain-string entries compare case-insensitively; every entry
+    # below is a `~`-prefixed regex instead, purely to keep matching
+    # case-sensitive so this stays exactly six endpoints, not their
+    # case-folded variants too.
+    "~^GET:/jellyfin/System/Info/Public$" 1;
+    "~^GET:/jellyfin/Users$" 1;
+    "~^GET:/jellyfin/UserViews$" 1;
+    "~^GET:/jellyfin/Items$" 1;
+    "~^GET:/jellyfin/Items/[^/]+/Images/Primary$" 1;
+    "~^POST:/jellyfin/Items/[^/]+$" 1;
+}
+
+server {
+    listen 80;
+    server_name _;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 256;
+    gzip_types text/plain text/css text/javascript application/javascript application/json application/manifest+json image/svg+xml;
+
+    # index.html and sw.js point at the current release's (content-hashed)
+    # asset URLs, so they must revalidate on every load or a redeploy can
+    # keep serving a stale index.html that points at a previous release's
+    # assets. `index index.html;` internally redirects `/` to `/index.html`
+    # before location matching, so a single rule covers both.
+    # no-cache (not no-store) still lets nginx answer cheap 304s via ETag.
+    location = /index.html {
+        add_header Cache-Control "no-cache" always;
+    }
+
+    location = /sw.js {
+        add_header Cache-Control "no-cache" always;
+    }
+
+    # Filenames under /assets/ are content-hashed, so a stale cached copy
+    # just means the browser requests a different URL after a redeploy.
+    location /assets/ {
+        add_header Cache-Control "public, max-age=31536000, immutable" always;
+    }
+
+    # Icons under /favicon/ don't change between releases.
+    location /favicon/ {
+        add_header Cache-Control "public, max-age=31536000, immutable" always;
+    }
+
+    # ...except the manifest itself, which can change between releases.
+    location = /favicon/site.webmanifest {
+        add_header Cache-Control "no-cache" always;
+    }
+
+    # Re-resolve the upstream on every request instead of caching its IP for
+    # the life of the nginx process, which would otherwise wedge the proxy
+    # after Jellyfin's container gets recreated with a new address.
+    # 127.0.0.11 is Docker's embedded DNS, only reachable on a user-defined
+    # network (what `docker compose up` gives you by default). detect-
+    # resolver.envsh substitutes the right nameserver for other setups
+    # (default bridge, host networking) instead.
+    resolver ${VITE_NGINX_RESOLVER} valid=30s;
+    set $jellyfin_upstream ${VITE_JELLYFIN_URL};
+
+    # Same-origin reverse proxy to Jellyfin: the browser never talks to
+    # Jellyfin directly, so there's no cross-origin request and the admin
+    # token never reaches the client bundle. The rewrite (rather than a URI
+    # on proxy_pass) avoids a doubled slash if VITE_JELLYFIN_URL is set with
+    # a trailing one.
+    location /jellyfin/ {
+        if ($jellyfin_allowed = 0) {
+            return 403;
+        }
+        rewrite ^/jellyfin/(.*)$ /$1 break;
+        proxy_pass $jellyfin_upstream;
+        # Jellyfin builds absolute URLs for its own redirects (some image and
+        # stream endpoints do this) from whatever Host it was sent, which is
+        # never the client-facing /jellyfin path; rewrite both the relative
+        # and absolute forms back onto it so the redirect doesn't escape the
+        # proxy.
+        proxy_redirect / /jellyfin/;
+        proxy_redirect ~^https?://[^/]*(/.*)?$ $scheme://$http_host/jellyfin$1;
+        proxy_set_header X-Emby-Token ${VITE_JELLYFIN_TOKEN};
+    }
+}
