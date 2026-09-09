@@ -53,7 +53,9 @@
           </button>
           <div id="tag-filter-panel" class="glass-panel tag-filter-panel">
             <p class="tag-filter-hint">Click a tag to require it, click again to exclude it, once more to reset.</p>
+            <input id="tag-filter-search" type="text" class="glass-input tag-filter-search-input" placeholder="Search tags..." autocomplete="off" aria-label="Search tags">
             <div id="tag-filter-list" class="tag-filter-list"></div>
+            <span id="tag-filter-search-status" class="visually-hidden" aria-live="polite"></span>
             <button id="tag-filter-clear" type="button" class="tag-filter-clear-btn">Clear tag filters</button>
           </div>
         </div>

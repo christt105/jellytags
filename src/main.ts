@@ -107,6 +107,8 @@ const tagFilterPanel = document.getElementById('tag-filter-panel') as HTMLDivEle
 const tagFilterList = document.getElementById('tag-filter-list') as HTMLDivElement;
 const tagFilterCount = document.getElementById('tag-filter-count') as HTMLSpanElement;
 const tagFilterClear = document.getElementById('tag-filter-clear') as HTMLButtonElement;
+const tagFilterSearch = document.getElementById('tag-filter-search') as HTMLInputElement;
+const tagFilterSearchStatus = document.getElementById('tag-filter-search-status') as HTMLSpanElement;
 
 function openSidebar() {
     sidebarEl.classList.add('open');
@@ -136,11 +138,16 @@ filtersToggle?.addEventListener('click', () => {
 function openTagFilterPanel() {
     tagFilterPanel.classList.add('open');
     tagFilterToggle.classList.add('active');
+    tagFilterSearch.focus();
 }
 
 function closeTagFilterPanel() {
     tagFilterPanel.classList.remove('open');
     tagFilterToggle.classList.remove('active');
+    if (tagFilterSearch.value) {
+        tagFilterSearch.value = '';
+        renderTagFilterPanel();
+    }
 }
 
 tagFilterToggle.addEventListener('click', (e) => {
@@ -159,16 +166,33 @@ document.addEventListener('click', () => closeTagFilterPanel());
 tagFilterClear.addEventListener('click', () => {
     includeTagFilters.clear();
     excludeTagFilters.clear();
+    tagFilterSearch.value = '';
     renderTagFilterPanel();
     filterAndRender();
 });
 
+tagFilterSearch.addEventListener('input', () => renderTagFilterPanel());
+
+tagFilterList.addEventListener('click', (e) => {
+    const chip = (e.target as HTMLElement).closest('[data-tag-filter]');
+    if (!chip) return;
+    cycleTagFilter(chip.getAttribute('data-tag-filter')!);
+});
+
 // Every known tag across the whole library, independent of the current
 // filters, so a tag stays choosable even while it's actively excluded.
+let knownTagsCache: string[] = [];
+let knownTagsCacheSource: MediaItem[] | null = null;
+
 function getAllKnownTags(): string[] {
+    if (knownTagsCacheSource === allItems) {
+        return knownTagsCache;
+    }
     const tags = new Set<string>();
     allItems.forEach(item => (item.Tags || []).forEach(t => tags.add(t)));
-    return Array.from(tags).sort((a, b) => a.localeCompare(b));
+    knownTagsCache = Array.from(tags).sort((a, b) => a.localeCompare(b));
+    knownTagsCacheSource = allItems;
+    return knownTagsCache;
 }
 
 // Cycles a tag through: unfiltered -> must have -> must not have -> unfiltered.
@@ -195,21 +219,34 @@ function renderTagFilterPanel() {
 
     if (knownTags.length === 0) {
         tagFilterList.innerHTML = `<span class="tag-filter-empty-msg">No tags in your library yet.</span>`;
+        tagFilterSearchStatus.textContent = '';
         return;
     }
 
-    tagFilterList.innerHTML = knownTags.map(tag => {
+    const isActive = (tag: string) => includeTagFilters.has(tag) || excludeTagFilters.has(tag);
+    const searchText = tagFilterSearch.value.trim().toLowerCase();
+
+    // Pinned tags come first so an active include/exclude filter stays visible
+    // even when it doesn't match the current search text.
+    const pinnedTags = knownTags.filter(isActive);
+    const matchingTags = knownTags.filter(tag => !isActive(tag) && (!searchText || tag.toLowerCase().includes(searchText)));
+    const visibleTags = [...pinnedTags, ...matchingTags];
+
+    if (visibleTags.length === 0) {
+        tagFilterList.innerHTML = `<span class="tag-filter-empty-msg">No tags match your search.</span>`;
+        tagFilterSearchStatus.textContent = 'No tags match your search.';
+        return;
+    }
+
+    tagFilterSearchStatus.textContent = searchText && matchingTags.length === 0
+        ? 'No other tags match your search.'
+        : '';
+
+    tagFilterList.innerHTML = visibleTags.map(tag => {
         const state = includeTagFilters.has(tag) ? 'include' : excludeTagFilters.has(tag) ? 'exclude' : '';
         const prefix = state === 'include' ? '✓ ' : state === 'exclude' ? '✗ ' : '';
         return `<span data-tag-filter="${escapeHtml(tag)}" class="tag-filter-chip ${state}">${prefix}${escapeHtml(tag)}</span>`;
     }).join('');
-
-    tagFilterList.querySelectorAll('[data-tag-filter]').forEach(el => {
-        el.addEventListener('click', (e) => {
-            const tag = (e.currentTarget as HTMLElement).getAttribute('data-tag-filter')!;
-            cycleTagFilter(tag);
-        });
-    });
 }
 
 // 3. Core Logic
