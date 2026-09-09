@@ -27,7 +27,7 @@ JellyTags is a lightweight, responsive web application for managing tags within 
 You can easily spin up the JellyTags interface using Docker and Docker Compose. `VITE_JELLYFIN_URL` and `VITE_JELLYFIN_TOKEN` are only used server-side, by nginx's reverse proxy under `/jellyfin`: the browser talks to that same-origin path and never sees the Jellyfin URL or token.
 
 > [!WARNING]
-> Anyone who can reach JellyTags' port gets full **admin** access to your Jellyfin server through `/jellyfin`, without needing any credential of their own — the proxy injects the token for them. Don't expose this port beyond a network you trust.
+> Anyone who can reach JellyTags' port gets full **admin** access to your Jellyfin server through `/jellyfin`, without needing any credential of their own: the proxy injects the token for them. Don't expose this port beyond a network you trust.
 
 ### 1. Create a `docker-compose.yml`
 Create a `docker-compose.yml` file anywhere on your server, or clone this repository and modify the existing one.
