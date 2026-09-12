@@ -86,6 +86,6 @@ server {
         # proxy.
         proxy_redirect / /jellyfin/;
         proxy_redirect ~^https?://[^/]*(/.*)?$ $scheme://$http_host/jellyfin$1;
-        proxy_set_header X-Emby-Token ${VITE_JELLYFIN_TOKEN};
+        proxy_set_header Authorization 'MediaBrowser Token="${VITE_JELLYFIN_TOKEN}"';
     }
 }

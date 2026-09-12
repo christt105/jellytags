@@ -17,7 +17,7 @@ export default defineConfig(({ command, mode }) => {
         '/jellyfin': {
           target: env.VITE_JELLYFIN_URL,
           changeOrigin: true,
-          headers: { 'X-Emby-Token': env.VITE_JELLYFIN_TOKEN },
+          headers: { Authorization: `MediaBrowser Token="${env.VITE_JELLYFIN_TOKEN}"` },
           rewrite: (path) => path.replace(/^\/jellyfin/, ''),
         },
       },
