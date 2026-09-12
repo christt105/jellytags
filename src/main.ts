@@ -18,8 +18,8 @@ const jellyfin = new Jellyfin({
 const apiBase = '/jellyfin';
 
 // With no accessToken, the SDK still sends `Authorization: ... Token=""`
-// on every request; this only works because Jellyfin falls back to the
-// proxy-injected X-Emby-Token header when that Token is empty.
+// on every request; the proxy overwrites that Authorization header outright
+// with one carrying the real token, so this empty one never reaches Jellyfin.
 const api = jellyfin.createApi(apiBase);
 
 const itemsApi = getItemsApi(api);
