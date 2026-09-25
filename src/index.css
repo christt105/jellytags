@@ -939,3 +939,288 @@ select.glass-input option {
     padding: 16px !important;
   }
 }
+/* Application view tabs and user tag management */
+.header-title-group-main {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  min-width: 0;
+}
+
+.app-view-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+}
+
+.app-view-tab {
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  padding: 7px 14px;
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.app-view-tab.active {
+  color: #fff;
+  background: linear-gradient(135deg, var(--jelly-blue), var(--jelly-purple));
+}
+
+.hidden-app-view {
+  display: none !important;
+}
+
+.managed-user-selector {
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  width:100%;
+  box-sizing:border-box;
+}
+
+.managed-user-selector-header {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  width:100%;
+}
+
+.managed-user-selector-title {
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+
+.managed-user-selector-title strong {
+  font-size:15px;
+}
+
+.managed-user-selector-title span {
+  color:var(--text-secondary);
+  font-size:13px;
+}
+
+.managed-user-select-all {
+  flex-shrink:0;
+}
+
+.managed-user-list {
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
+  gap:8px;
+  width:100%;
+  max-height:240px;
+  overflow-y:auto;
+  padding:12px;
+  box-sizing:border-box;
+  border:1px solid var(--border-color);
+  border-radius:12px;
+  background:rgba(255,255,255,0.02);
+}
+
+.managed-user-option {
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-width:0;
+  padding:9px 10px;
+  border-radius:8px;
+  cursor:pointer;
+  transition:background 0.15s ease;
+}
+
+.managed-user-option:hover {
+  background:rgba(255,255,255,0.06);
+}
+
+.managed-user-option input {
+  flex:0 0 auto;
+  width:16px;
+  height:16px;
+  margin:0;
+  cursor:pointer;
+}
+
+.managed-user-option span {
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+/* Media-only header controls should not appear in the Users view,
+   including at the narrow-screen breakpoint. */
+body:has(#user-management-view.active) #filters-toggle,
+body:has(#user-management-view.active) #sidebar-toggle,
+body:has(#user-management-view.active) #tag-filter-wrapper {
+  display: none !important;
+}
+
+.user-management-view {
+  display: none;
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  padding: 24px;
+}
+
+.user-management-view.active {
+  display: block;
+}
+
+.user-management-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.user-management-header h2 {
+  margin: 0 0 6px;
+  font-size: 1.25rem;
+}
+
+.user-management-header p,
+.user-tag-panel-header p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.managed-user-select {
+  min-width: 220px;
+}
+
+.user-tag-panels {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.user-tag-panel {
+  padding: 20px;
+  min-width: 0;
+}
+
+.managed-user-selector {
+  margin-bottom: 20px;
+}
+
+.user-tag-panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.user-tag-panel-header h3 {
+  margin: 0 0 6px;
+  font-size: 1rem;
+}
+
+.user-tag-count {
+  min-width: 28px;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-main);
+  font-size: 0.8rem;
+}
+
+.user-tag-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-height: 44px;
+  align-content: flex-start;
+  margin-bottom: 18px;
+}
+
+.user-tag-chip {
+  border: 1px solid var(--glass-border);
+  background: rgba(170, 92, 195, 0.18);
+  color: var(--text-main);
+  border-radius: 16px;
+  padding: 6px 10px;
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.user-tag-chip:hover {
+  background: rgba(170, 92, 195, 0.3);
+}
+
+.user-tag-chip span {
+  margin-left: 5px;
+  opacity: 0.7;
+}
+
+.user-tags-empty,
+.user-management-empty {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.user-tag-add-form {
+  display: flex;
+  gap: 8px;
+}
+
+.user-tag-add-form .glass-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.user-tag-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+@media (max-width: 800px) {
+  .header-title-group-main {
+    gap: 10px;
+  }
+
+  .app-view-tabs {
+    order: 2;
+  }
+
+  .user-management-view {
+    padding: 14px;
+  }
+
+  .user-management-header,
+  .user-tag-panels {
+    grid-template-columns: 1fr;
+  }
+
+  .user-management-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .managed-user-select {
+    width: 100%;
+  }
+
+  .user-tag-panels {
+    display: grid;
+  }
+}

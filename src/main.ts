@@ -4,7 +4,7 @@ import { getItemUpdateApi } from '@jellyfin/sdk/lib/utils/api/item-update-api';
 import { getSystemApi } from '@jellyfin/sdk/lib/utils/api/system-api';
 import { getUserApi } from '@jellyfin/sdk/lib/utils/api/user-api';
 import { getUserViewsApi } from '@jellyfin/sdk/lib/utils/api/user-views-api';
-import { BaseItemKind, ItemFields } from '@jellyfin/sdk/lib/generated-client/models';
+import { BaseItemKind, ItemFields, UserPolicy } from '@jellyfin/sdk/lib/generated-client/models';
 
 // 1. Initialize SDK
 const jellyfin = new Jellyfin({
@@ -52,6 +52,16 @@ let filteredItems: MediaItem[] = [];
 let sourceLibraries: SourceLibrary[] = [];
 let selectedIds = new Set<string>();
 let currentUserId = '';
+let managedUsers: Array<{ Id: string; Name?: string; Policy?: UserPolicy | null }> = [];
+let currentAppView: 'media' | 'users' = 'media';
+let selectedManagedUserIds = new Set<string>();
+
+let bulkAddedAllowedTags = new Set<string>();
+let bulkRemovedAllowedTags = new Set<string>();
+let bulkAddedBlockedTags = new Set<string>();
+let bulkRemovedBlockedTags = new Set<string>();
+let proposedAllowedTags: string[] = [];
+let proposedBlockedTags: string[] = [];
 let proposedTags: string[] = [];
 let proposedGenres: string[] = [];
 
@@ -109,6 +119,9 @@ const tagFilterCount = document.getElementById('tag-filter-count') as HTMLSpanEl
 const tagFilterClear = document.getElementById('tag-filter-clear') as HTMLButtonElement;
 const tagFilterSearch = document.getElementById('tag-filter-search') as HTMLInputElement;
 const tagFilterSearchStatus = document.getElementById('tag-filter-search-status') as HTMLSpanElement;
+const mediaViewBtn = document.getElementById('media-view-btn') as HTMLButtonElement;
+const usersViewBtn = document.getElementById('users-view-btn') as HTMLButtonElement;
+const userManagementView = document.getElementById('user-management-view') as HTMLDivElement;
 
 function openSidebar() {
     sidebarEl.classList.add('open');
@@ -263,7 +276,9 @@ async function init() {
         // be a restricted account whose limited library access would hide most items.
         const adminUser = usersRes.data.find(u => u.Policy?.IsAdministrator);
         currentUserId = (adminUser || usersRes.data[0]).Id as string;
-
+        managedUsers = usersRes.data
+            .filter(u => u.Id)
+            .map(u => ({ Id: u.Id as string, Name: u.Name, Policy: u.Policy }));
         await fetchItems();
     } catch (e) {
         loadingEl.innerHTML = `<h3 class="error-message">Connection Failed. Check your .env file and ensure the Jellyfin server is running.</h3>`;
@@ -802,6 +817,542 @@ function getApplyButtonLabel() {
     return 'Append to';
 }
 
+
+// 5. User Tag Management
+function getManagedUsers() {
+    return managedUsers.filter(u => selectedManagedUserIds.has(u.Id));
+}
+
+function getManagedUser() {
+    return getManagedUsers()[0];
+}
+
+function getKnownUserTags(): string[] {
+    const tags = new Set<string>();
+
+    allItems.forEach(item => {
+        (item.Tags || []).forEach(tag => tags.add(tag));
+    });
+
+    getManagedUsers().forEach(user => {
+        (user.Policy?.AllowedTags || []).forEach(tag => tags.add(tag));
+        (user.Policy?.BlockedTags || []).forEach(tag => tags.add(tag));
+    });
+
+    return Array.from(tags).sort((a, b) => a.localeCompare(b));
+}
+
+function resetUserTagDraft() {
+    bulkAddedAllowedTags.clear();
+    bulkRemovedAllowedTags.clear();
+    bulkAddedBlockedTags.clear();
+    bulkRemovedBlockedTags.clear();
+
+    const allowed = new Set<string>();
+    const blocked = new Set<string>();
+
+    getManagedUsers().forEach(user => {
+        (user.Policy?.AllowedTags || []).forEach(tag => allowed.add(tag));
+        (user.Policy?.BlockedTags || []).forEach(tag => blocked.add(tag));
+    });
+
+    proposedAllowedTags = Array.from(allowed).sort((a, b) => a.localeCompare(b));
+    proposedBlockedTags = Array.from(blocked).sort((a, b) => a.localeCompare(b));
+}
+
+function renderUserTagChips(list: string[], dataAttr: string, emptyText: string) {
+    if (list.length === 0) {
+        return `<span class="user-tags-empty">${escapeHtml(emptyText)}</span>`;
+    }
+
+    return list.map(tag => `
+        <button
+            type="button"
+            class="user-tag-chip"
+            data-user-tag-action="${dataAttr}"
+            data-user-tag="${escapeHtml(tag)}"
+        >
+            ${escapeHtml(tag)} <span aria-hidden="true">&times;</span>
+        </button>
+    `).join('');
+}
+
+function renderUserTagManager() {
+    if (currentAppView !== 'users') return;
+
+    if (managedUsers.length === 0) {
+        userManagementView.innerHTML =
+            '<div class="user-management-empty">No Jellyfin users found.</div>';
+        return;
+    }
+
+    const knownTags = getKnownUserTags();
+
+    const usedTags = new Set([
+        ...proposedAllowedTags,
+        ...proposedBlockedTags
+    ]);
+
+    const availableTags = knownTags.filter(tag => !usedTags.has(tag));
+
+    const allSelected =
+        managedUsers.length > 0 &&
+        managedUsers.every(user => selectedManagedUserIds.has(user.Id));
+
+    userManagementView.innerHTML = `
+        <div class="user-management-header glass-panel">
+            <div class="user-management-title">
+                <h2>User Tag Access</h2>
+                <p>Manage Jellyfin's allow and block tag lists for the selected users. Existing tags are preserved.</p>
+            </div>
+        </div>
+
+        <section class="glass-panel user-tag-panel managed-user-selector">
+            <div class="user-tag-panel-header">
+                <div>
+                    <h3>Users</h3>
+                    <p>
+                        ${selectedManagedUserIds.size} selected
+                    </p>
+                </div>
+
+                <button
+                    id="managed-user-select-all"
+                    type="button"
+                    class="glass-button"
+                >
+                    ${allSelected ? 'Deselect All' : 'Select All'}
+                </button>
+            </div>
+
+            <div class="managed-user-list">
+                ${managedUsers.map(user => `
+                    <label class="managed-user-option">
+                        <input
+                            type="checkbox"
+                            class="managed-user-checkbox"
+                            data-managed-user-id="${escapeHtml(user.Id)}"
+                            ${selectedManagedUserIds.has(user.Id) ? 'checked' : ''}
+                        />
+
+                        <span
+                            class="managed-user-checkbox-box"
+                            aria-hidden="true"
+                        ></span>
+
+                        <span class="managed-user-name">
+                            ${escapeHtml(user.Name || user.Id)}
+                        </span>
+
+                        ${
+                            user.Policy?.IsAdministrator
+                                ? '<span class="managed-user-admin">Admin</span>'
+                                : ''
+                        }
+                    </label>
+                `).join('')}
+            </div>
+        </section>
+
+        <div class="user-tag-panels">
+            <section class="glass-panel user-tag-panel">
+                <div class="user-tag-panel-header">
+                    <div>
+                        <h3>Allow items with tags</h3>
+                        <p>Only items matching these tags are allowed when Jellyfin evaluates this list.</p>
+                    </div>
+
+                    <span class="user-tag-count">
+                        ${proposedAllowedTags.length}
+                    </span>
+                </div>
+
+                <div class="user-tag-chip-list">
+                    ${renderUserTagChips(
+                        proposedAllowedTags,
+                        'allowed',
+                        'No allowed tags'
+                    )}
+                </div>
+
+                <form id="add-allowed-tag-form" class="user-tag-add-form">
+                    <input
+                        id="new-allowed-tag-input"
+                        class="glass-input"
+                        list="user-tag-options"
+                        placeholder="Add allowed tag..."
+                        autocomplete="off"
+                    />
+
+                    <button type="submit" class="glass-button">
+                        Add
+                    </button>
+                </form>
+            </section>
+
+            <section class="glass-panel user-tag-panel">
+                <div class="user-tag-panel-header">
+                    <div>
+                        <h3>Block items with tags</h3>
+                        <p>Items matching these tags are blocked for this user.</p>
+                    </div>
+
+                    <span class="user-tag-count">
+                        ${proposedBlockedTags.length}
+                    </span>
+                </div>
+
+                <div class="user-tag-chip-list">
+                    ${renderUserTagChips(
+                        proposedBlockedTags,
+                        'blocked',
+                        'No blocked tags'
+                    )}
+                </div>
+
+                <form id="add-blocked-tag-form" class="user-tag-add-form">
+                    <input
+                        id="new-blocked-tag-input"
+                        class="glass-input"
+                        list="user-tag-options"
+                        placeholder="Add blocked tag..."
+                        autocomplete="off"
+                    />
+
+                    <button type="submit" class="glass-button">
+                        Add
+                    </button>
+                </form>
+            </section>
+        </div>
+
+        <datalist id="user-tag-options">
+            ${availableTags.map(tag =>
+                `<option value="${escapeHtml(tag)}"></option>`
+            ).join('')}
+        </datalist>
+
+        <div class="user-tag-actions">
+            <button
+                id="reset-user-tags-btn"
+                type="button"
+                class="glass-button"
+            >
+                Reset
+            </button>
+
+            <button
+                id="save-user-tags-btn"
+                type="button"
+                class="glass-button apply-btn"
+            >
+                Save Changes
+            </button>
+        </div>
+    `;
+
+    // Select All / Deselect All
+    document.getElementById('managed-user-select-all')?.addEventListener(
+        'click',
+        () => {
+            if (allSelected) {
+                selectedManagedUserIds.clear();
+            } else {
+                selectedManagedUserIds = new Set(
+                    managedUsers.map(user => user.Id)
+                );
+            }
+
+            resetUserTagDraft();
+            renderUserTagManager();
+        }
+    );
+
+    // Individual user selection
+    document
+        .querySelectorAll<HTMLInputElement>('.managed-user-checkbox')
+        .forEach(input => {
+            input.addEventListener('change', () => {
+                const userId =
+                    input.getAttribute('data-managed-user-id');
+
+                if (!userId) return;
+
+                // Remember the current scroll position before the list is rebuilt.
+                const userList =
+                    document.querySelector<HTMLElement>('.managed-user-list');
+
+                const scrollTop = userList?.scrollTop ?? 0;
+
+                if (input.checked) {
+                    selectedManagedUserIds.add(userId);
+                } else {
+                    selectedManagedUserIds.delete(userId);
+                }
+
+                resetUserTagDraft();
+                renderUserTagManager();
+
+                // Restore the user's position after the list is rebuilt.
+                requestAnimationFrame(() => {
+                    const newUserList =
+                        document.querySelector<HTMLElement>('.managed-user-list');
+
+                    if (newUserList) {
+                        newUserList.scrollTop = scrollTop;
+                    }
+                });
+            });
+        });
+
+    // Removing a tag removes it from EVERY selected user.
+    document
+        .querySelectorAll('[data-user-tag-action]')
+        .forEach(el => {
+            el.addEventListener('click', e => {
+                const target = e.currentTarget as HTMLElement;
+
+                const action =
+                    target.getAttribute('data-user-tag-action');
+
+                const tag =
+                    target.getAttribute('data-user-tag');
+
+                if (!tag) return;
+
+                const list =
+                    action === 'allowed'
+                        ? proposedAllowedTags
+                        : proposedBlockedTags;
+
+                const index = list.indexOf(tag);
+
+                if (index >= 0) {
+                    list.splice(index, 1);
+                }
+
+                if (action === 'allowed') {
+                    bulkRemovedAllowedTags.add(tag);
+                    bulkAddedAllowedTags.delete(tag);
+                } else {
+                    bulkRemovedBlockedTags.add(tag);
+                    bulkAddedBlockedTags.delete(tag);
+                }
+
+                renderUserTagManager();
+            });
+        });
+
+    // Adding a tag adds it to EVERY selected user.
+    //
+    // Even if the tag already appears in the displayed union because
+    // another selected user already has it, we still stage the addition.
+    const addTag = (
+        list: string[],
+        inputId: string,
+        addedSet: Set<string>,
+        removedSet: Set<string>
+    ) => {
+        const input =
+            document.getElementById(inputId) as HTMLInputElement | null;
+
+        const value = input?.value.trim();
+
+        if (!value) return;
+
+        removedSet.delete(value);
+        addedSet.add(value);
+
+        if (!list.includes(value)) {
+            list.push(value);
+            list.sort((a, b) => a.localeCompare(b));
+        }
+
+        renderUserTagManager();
+    };
+
+    document
+        .getElementById('add-allowed-tag-form')
+        ?.addEventListener('submit', e => {
+            e.preventDefault();
+
+            addTag(
+                proposedAllowedTags,
+                'new-allowed-tag-input',
+                bulkAddedAllowedTags,
+                bulkRemovedAllowedTags
+            );
+        });
+
+    document
+        .getElementById('add-blocked-tag-form')
+        ?.addEventListener('submit', e => {
+            e.preventDefault();
+
+            addTag(
+                proposedBlockedTags,
+                'new-blocked-tag-input',
+                bulkAddedBlockedTags,
+                bulkRemovedBlockedTags
+            );
+        });
+
+    document
+        .getElementById('reset-user-tags-btn')
+        ?.addEventListener('click', () => {
+            resetUserTagDraft();
+            renderUserTagManager();
+        });
+
+    // Save changes to every selected user.
+    document
+        .getElementById('save-user-tags-btn')
+        ?.addEventListener('click', async () => {
+            const btn =
+                document.getElementById(
+                    'save-user-tags-btn'
+                ) as HTMLButtonElement;
+
+            const selectedUsers = getManagedUsers();
+
+            if (selectedUsers.length === 0) {
+                alert('Select at least one Jellyfin user.');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerText = 'Saving...';
+
+            try {
+                let savedCount = 0;
+
+                for (const managed of selectedUsers) {
+                    if (!managed.Id) continue;
+
+                    // Get the latest policy so unrelated tags are never
+                    // overwritten.
+                    const freshUserRes =
+                        await userApi.getUserById({
+                            userId: managed.Id
+                        });
+
+                    const freshUser = freshUserRes.data;
+
+                    if (!freshUser.Policy) {
+                        throw new Error(
+                            `Jellyfin returned no policy for ${
+                                managed.Name || managed.Id
+                            }.`
+                        );
+                    }
+
+                    const existingAllowed = new Set(
+                        freshUser.Policy.AllowedTags || []
+                    );
+
+                    const existingBlocked = new Set(
+                        freshUser.Policy.BlockedTags || []
+                    );
+
+                    // Remove only explicitly removed tags.
+                    bulkRemovedAllowedTags.forEach(tag => {
+                        existingAllowed.delete(tag);
+                    });
+
+                    bulkRemovedBlockedTags.forEach(tag => {
+                        existingBlocked.delete(tag);
+                    });
+
+                    // Add only explicitly added tags.
+                    bulkAddedAllowedTags.forEach(tag => {
+                        existingAllowed.add(tag);
+                    });
+
+                    bulkAddedBlockedTags.forEach(tag => {
+                        existingBlocked.add(tag);
+                    });
+
+                    const updatedPolicy: UserPolicy = {
+                        ...freshUser.Policy,
+
+                        AllowedTags: Array.from(existingAllowed)
+                            .sort((a, b) => a.localeCompare(b)),
+
+                        BlockedTags: Array.from(existingBlocked)
+                            .sort((a, b) => a.localeCompare(b))
+                    };
+
+                    await userApi.updateUserPolicy({
+                        userId: managed.Id,
+                        userPolicy: updatedPolicy
+                    });
+
+                    managed.Policy = updatedPolicy;
+                    savedCount++;
+                }
+
+                resetUserTagDraft();
+                renderUserTagManager();
+
+                alert(
+                    `Saved tag access settings for ${savedCount} selected user${
+                        savedCount === 1 ? '' : 's'
+                    }.`
+                );
+            } catch (error) {
+                console.error(
+                    'Failed to update user tag policies',
+                    error
+                );
+
+                alert(
+                    'Failed to save user tag settings. Check the Jellyfin connection and permissions.'
+                );
+            } finally {
+                const currentBtn =
+                    document.getElementById(
+                        'save-user-tags-btn'
+                    ) as HTMLButtonElement | null;
+
+                if (currentBtn) {
+                    currentBtn.disabled = false;
+                    currentBtn.innerText = 'Save Changes';
+                }
+            }
+        });
+}
+
+function showAppView(view: 'media' | 'users') {
+    currentAppView = view;
+
+    const isUsers = view === 'users';
+
+    document
+        .querySelector('.main-content')
+        ?.classList.toggle('hidden-app-view', isUsers);
+
+    document
+        .querySelector('.header-actions')
+        ?.classList.toggle('hidden-app-view', isUsers);
+
+    document
+        .querySelector('.sidebar-container')
+        ?.classList.toggle('hidden-app-view', isUsers);
+
+    document
+        .querySelector('.header-search-wrapper')
+        ?.classList.toggle('hidden-app-view', isUsers);
+
+    userManagementView.classList.toggle('active', isUsers);
+    mediaViewBtn.classList.toggle('active', !isUsers);
+    usersViewBtn.classList.toggle('active', isUsers);
+
+    if (isUsers) {
+        resetUserTagDraft();
+        renderUserTagManager();
+    }
+}
+
 // 5. Setup Listeners
 searchInput.addEventListener('input', filterAndRender);
 refreshBtn.addEventListener('click', fetchItems);
@@ -809,6 +1360,8 @@ selectAllBtn.addEventListener('click', selectAllFiltered);
 sortSelect.addEventListener('change', filterAndRender);
 sourceLibrarySelect.addEventListener('change', filterAndRender);
 parentalRatingSelect.addEventListener('change', filterAndRender);
+mediaViewBtn?.addEventListener('click', () => showAppView('media'));
+usersViewBtn?.addEventListener('click', () => showAppView('users'));
 
 // Boot
 init();

@@ -10,6 +10,8 @@ map $request_method:$uri $jellyfin_allowed {
     # case-folded variants too.
     "~^GET:/jellyfin/System/Info/Public$" 1;
     "~^GET:/jellyfin/Users$" 1;
+    "~^GET:/jellyfin/Users/[^/]+$" 1;
+    "~^POST:/jellyfin/Users/[^/]+/Policy$" 1;
     "~^GET:/jellyfin/UserViews$" 1;
     "~^GET:/jellyfin/Items$" 1;
     "~^GET:/jellyfin/Items/[^/]+/Images/Primary$" 1;

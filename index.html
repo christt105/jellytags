@@ -20,9 +20,15 @@
   <div class="app-container">
     <header class="glass-panel header-panel">
       <div class="header-title-group">
-        <h1 class="header-title">
-          JellyTags
-        </h1>
+        <div class="header-title-group-main">
+          <h1 class="header-title">
+            JellyTags
+          </h1>
+          <div class="app-view-tabs" role="tablist" aria-label="JellyTags views">
+            <button id="media-view-btn" type="button" class="app-view-tab active" role="tab">Media</button>
+            <button id="users-view-btn" type="button" class="app-view-tab" role="tab">Users</button>
+          </div>
+        </div>
         <div class="header-search header-search-wrapper">
           <input id="search-input" class="glass-input search-input-field" placeholder="Search by name or tag..." />
         </div>
@@ -77,6 +83,8 @@
           <!-- Grid Items go here -->
         </div>
       </div>
+
+      <div id="user-management-view" class="user-management-view"></div>
 
       <div class="sidebar-container">
         <div id="sidebar-overlay" class="sidebar-overlay"></div>
