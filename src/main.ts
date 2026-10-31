@@ -5,6 +5,10 @@ import { getSystemApi } from '@jellyfin/sdk/lib/utils/api/system-api';
 import { getUserApi } from '@jellyfin/sdk/lib/utils/api/user-api';
 import { getUserViewsApi } from '@jellyfin/sdk/lib/utils/api/user-views-api';
 import { BaseItemKind, ItemFields } from '@jellyfin/sdk/lib/generated-client/models';
+import type { EditField } from './edit-field';
+import { escapeHtml } from './html';
+import { ItemFieldUpdater } from './item-update';
+import type { MediaItem } from './media-item';
 
 // 1. Initialize SDK
 const jellyfin = new Jellyfin({
@@ -27,20 +31,7 @@ const updateApi = getItemUpdateApi(api);
 const systemApi = getSystemApi(api);
 const userApi = getUserApi(api);
 const userViewsApi = getUserViewsApi(api);
-
-type MediaItem = {
-    Id: string;
-    Name?: string;
-    Type?: string;
-    Tags?: string[];
-    Genres?: string[];
-    DateCreated?: string;
-    OfficialRating?: string | null;
-    CustomRating?: string | null;
-    ImageTags?: { Primary?: string };
-    SourceLibraryId?: string;
-    SourceLibraryName?: string;
-};
+const itemUpdater = new ItemFieldUpdater(itemsApi, updateApi, () => currentUserId);
 
 type SourceLibrary = {
     id: string;
@@ -61,7 +52,6 @@ let includeTagFilters = new Set<string>();
 let excludeTagFilters = new Set<string>();
 
 // Which metadata field the sidebar edits. Tags and genres share the same editor.
-type EditField = 'Tags' | 'Genres';
 let editTarget: EditField = 'Tags';
 
 function getProposed(): string[] {
@@ -75,18 +65,6 @@ function getItemValues(item: MediaItem): string[] {
 // Lowercase singular noun for the active field, used in placeholders/messages.
 function targetNoun(): string {
     return editTarget === 'Genres' ? 'genre' : 'tag';
-}
-
-// Escape user-controlled strings before injecting into innerHTML. Media names,
-// tags and library names can contain <, >, &, or quotes which otherwise break
-// rendering and allow HTML injection.
-function escapeHtml(value: unknown): string {
-    return String(value ?? '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
 }
 
 // 2. DOM Elements
@@ -193,6 +171,22 @@ function getAllKnownTags(): string[] {
     knownTagsCache = Array.from(tags).sort((a, b) => a.localeCompare(b));
     knownTagsCacheSource = allItems;
     return knownTagsCache;
+}
+
+function invalidateKnownTags() {
+    knownTagsCacheSource = null;
+}
+
+function applyUpdatedValues(field: EditField, updated: Map<string, string[]>) {
+    if (updated.size === 0) return;
+    allItems.forEach(item => {
+        const values = updated.get(item.Id);
+        if (!values) return;
+        if (field === 'Genres') item.Genres = [...values];
+        else item.Tags = [...values];
+    });
+    invalidateKnownTags();
+    renderTagFilterPanel();
 }
 
 // Cycles a tag through: unfiltered -> must have -> must not have -> unfiltered.
@@ -677,100 +671,28 @@ function renderSidebarEditor(valueCounts: Record<string, number>) {
 
         try {
             const ids = Array.from(selectedIds);
-            let successCount = 0;
-            const failedItems: string[] = [];
-
-            for (let index = 0; index < ids.length; index++) {
-                const id = ids[index];
-                btn.innerText = `Saving ${index + 1}/${ids.length}...`;
-
-                try {
-                    const localItem = allItems.find(i => i.Id === id);
-                    const itemRes = await itemsApi.getItems({
-                        ids: [id],
-                        userId: currentUserId,
-                        fields: [
-                            ItemFields.Tags,
-                            ItemFields.Genres,
-                            ItemFields.Overview,
-                            ItemFields.ProviderIds,
-                            ItemFields.Studios,
-                            ItemFields.People,
-                            ItemFields.Taglines,
-                            ItemFields.ProductionLocations,
-                            ItemFields.OriginalTitle,
-                            ItemFields.SortName,
-                            ItemFields.CustomRating,
-                            ItemFields.DateCreated,
-                            ItemFields.RemoteTrailers,
-                            ItemFields.ExternalUrls,
-                        ] as ItemFields[]
-                    });
-                    const serverItem = itemRes.data.Items?.[0];
-                    if (!serverItem) {
-                        throw new Error(`Item ${id} not found on server.`);
-                    }
-                    const itemName = serverItem.Name || localItem?.Name || '';
-
-                    if (!itemName) {
-                        throw new Error('Cannot update item without a Name field.');
-                    }
-
-                    const proposed = getProposed();
-                    const currentValues = (editTarget === 'Genres'
-                        ? (serverItem.Genres || localItem?.Genres)
-                        : (serverItem.Tags || localItem?.Tags)) || [];
-                    const updatedValues = mode === 'append'
-                        ? Array.from(new Set([...currentValues, ...proposed]))
-                        : mode === 'remove'
-                            ? currentValues.filter((value: string) => !proposed.includes(value))
-                            : [...proposed];
-
-                    // Jellyfin rejects the round-tripped DTO when it carries a
-                    // Trickplay map: TrickplayInfoDto fails to deserialize on the
-                    // server and the whole update fails. Strip it before sending.
-                    const { Trickplay: _trickplay, ...sanitizedItem } = serverItem;
-
-                    await updateApi.updateItem({
-                        itemId: id,
-                        baseItemDto: {
-                            ...sanitizedItem,
-                            Id: id,
-                            Name: itemName,
-                            Tags: editTarget === 'Tags' ? updatedValues : (serverItem.Tags || []),
-                            Genres: editTarget === 'Genres' ? updatedValues : (serverItem.Genres || []),
-                            ProviderIds: serverItem.ProviderIds || {}
-                        }
-                    });
-
-                    if (localItem) {
-                        if (editTarget === 'Genres') localItem.Genres = [...updatedValues];
-                        else localItem.Tags = [...updatedValues];
-                    }
-
-                    successCount++;
-                } catch (itemError) {
-                    const axiosLikeError = itemError as {
-                        response?: { status?: number; data?: unknown };
-                        message?: string;
-                    };
-                    console.error(
-                        `Failed to update item ${id}`,
-                        axiosLikeError?.message || itemError,
-                        axiosLikeError?.response?.status,
-                        axiosLikeError?.response?.data
-                    );
-                    const failedItem = allItems.find(i => i.Id === id);
-                    failedItems.push(failedItem?.Name || id);
+            const field = editTarget;
+            const proposed = [...getProposed()];
+            const outcome = await itemUpdater.updateItems(ids, field, currentValues => mode === 'append'
+                ? Array.from(new Set([...currentValues, ...proposed]))
+                : mode === 'remove'
+                    ? currentValues.filter((value: string) => !proposed.includes(value))
+                    : [...proposed], {
+                onProgress: ({ index, total }) => {
+                    btn.innerText = `Saving ${index + 1}/${total}...`;
                 }
-            }
+            });
+
+            applyUpdatedValues(field, outcome.updated);
+            const successCount = outcome.updated.size + outcome.unchangedIds.length;
+            const failedItems = outcome.failedIds.map(id => allItems.find(i => i.Id === id)?.Name || id);
 
             if (successCount > 0) {
                 clearSelection();
             }
 
             if (failedItems.length === 0) {
-                alert(`Successfully updated ${editTarget.toLowerCase()} for ${successCount} items!`);
+                alert(`Successfully updated ${field.toLowerCase()} for ${successCount} items!`);
             } else {
                 const preview = failedItems.slice(0, 10).join(', ');
                 const remaining = failedItems.length > 10 ? ` (+${failedItems.length - 10} more)` : '';
