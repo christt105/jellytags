@@ -9,6 +9,8 @@ import type { EditField } from './edit-field';
 import { escapeHtml } from './html';
 import { ItemFieldUpdater } from './item-update';
 import type { MediaItem } from './media-item';
+import { mergeValues } from './merge';
+import { MergeDialog, type MergeResult } from './merge-dialog';
 
 // 1. Initialize SDK
 const jellyfin = new Jellyfin({
@@ -87,6 +89,13 @@ const tagFilterCount = document.getElementById('tag-filter-count') as HTMLSpanEl
 const tagFilterClear = document.getElementById('tag-filter-clear') as HTMLButtonElement;
 const tagFilterSearch = document.getElementById('tag-filter-search') as HTMLInputElement;
 const tagFilterSearchStatus = document.getElementById('tag-filter-search-status') as HTMLSpanElement;
+const tagFilterMerge = document.getElementById('tag-filter-merge') as HTMLButtonElement;
+
+const mergeDialog = new MergeDialog(
+    document.getElementById('merge-dialog') as HTMLDialogElement,
+    itemUpdater,
+    { getItems: () => allItems, onMerged: handleMerged }
+);
 
 function openSidebar() {
     sidebarEl.classList.add('open');
@@ -151,6 +160,11 @@ tagFilterClear.addEventListener('click', () => {
 
 tagFilterSearch.addEventListener('input', () => renderTagFilterPanel());
 
+tagFilterMerge.addEventListener('click', () => {
+    closeTagFilterPanel();
+    mergeDialog.open('Tags');
+});
+
 tagFilterList.addEventListener('click', (e) => {
     const chip = (e.target as HTMLElement).closest('[data-tag-filter]');
     if (!chip) return;
@@ -187,6 +201,36 @@ function applyUpdatedValues(field: EditField, updated: Map<string, string[]>) {
     });
     invalidateKnownTags();
     renderTagFilterPanel();
+}
+
+function replaceMerged(values: Set<string>, sources: ReadonlySet<string>, target: string): boolean {
+    let replaced = false;
+    sources.forEach(source => {
+        if (values.delete(source)) replaced = true;
+    });
+    if (replaced) values.add(target);
+    return replaced;
+}
+
+function handleMerged({ field, sources, target, outcome }: MergeResult) {
+    applyUpdatedValues(field, outcome.updated);
+
+    if (field === 'Tags') {
+        if (replaceMerged(includeTagFilters, sources, target)) {
+            excludeTagFilters.delete(target);
+            sources.forEach(source => excludeTagFilters.delete(source));
+        } else if (replaceMerged(excludeTagFilters, sources, target) && includeTagFilters.has(target)) {
+            excludeTagFilters.delete(target);
+        }
+    }
+
+    const proposed = field === 'Genres' ? proposedGenres : proposedTags;
+    if (proposed.some(value => sources.has(value))) {
+        proposed.splice(0, proposed.length, ...mergeValues(proposed, sources, target));
+    }
+
+    renderTagFilterPanel();
+    filterAndRender();
 }
 
 // Cycles a tag through: unfiltered -> must have -> must not have -> unfiltered.
@@ -479,9 +523,11 @@ function updateSidebar() {
                 <button id="sidebar-close" class="sidebar-close-btn mobile-only">&times;</button>
             </div>
             <p class="sidebar-empty-msg">Select items from the grid to edit their tags and genres.</p>
+            <button id="sidebar-merge-btn" type="button" class="tag-filter-clear-btn sidebar-merge-btn">Merge or rename tags and genres...</button>
         `;
         const closeBtn = document.getElementById('sidebar-close');
         closeBtn?.addEventListener('click', closeSidebar);
+        document.getElementById('sidebar-merge-btn')?.addEventListener('click', () => mergeDialog.open(editTarget));
         closeSidebar();
         return;
     }

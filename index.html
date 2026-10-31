@@ -57,6 +57,7 @@
             <div id="tag-filter-list" class="tag-filter-list"></div>
             <span id="tag-filter-search-status" class="visually-hidden" aria-live="polite"></span>
             <button id="tag-filter-clear" type="button" class="tag-filter-clear-btn">Clear tag filters</button>
+            <button id="tag-filter-merge" type="button" class="tag-filter-clear-btn tag-filter-merge-btn">Merge or rename tags...</button>
           </div>
         </div>
         <button id="select-all-btn" class="glass-button header-button">
@@ -89,6 +90,30 @@
         </div>
       </div>
     </div>
+
+    <dialog id="merge-dialog" class="glass-panel merge-dialog" aria-labelledby="merge-dialog-title">
+      <div class="merge-dialog-header">
+        <h3 id="merge-dialog-title" class="sidebar-title">Merge or rename</h3>
+        <button id="merge-dialog-close" type="button" class="sidebar-close-btn merge-dialog-close-btn" aria-label="Close">&times;</button>
+      </div>
+      <div class="edit-target-toggle">
+        <button type="button" class="edit-target-btn active" data-merge-field="Tags">Tags</button>
+        <button type="button" class="edit-target-btn" data-merge-field="Genres">Genres</button>
+      </div>
+      <h4 id="merge-sources-title" class="section-subtitle">Tags to merge</h4>
+      <input id="merge-source-search" type="text" class="glass-input merge-search-input" placeholder="Search tags..." autocomplete="off" aria-label="Search tags">
+      <div id="merge-source-list" class="tag-filter-list merge-source-list" role="group" aria-labelledby="merge-sources-title"></div>
+      <label for="merge-target-input" class="section-subtitle merge-target-label">Into</label>
+      <input id="merge-target-input" type="text" class="glass-input merge-target-input" list="merge-target-options" placeholder="New or existing tag" autocomplete="off">
+      <datalist id="merge-target-options"></datalist>
+      <p id="merge-target-hint" class="merge-hint"></p>
+      <div id="merge-preview" class="merge-preview"></div>
+      <p id="merge-status" class="merge-status" role="status" aria-live="polite"></p>
+      <div class="merge-dialog-actions">
+        <button id="merge-cancel-btn" type="button" class="tag-filter-clear-btn merge-cancel-btn">Close</button>
+        <button id="merge-confirm-btn" type="button" class="glass-button merge-confirm-btn" disabled>Merge</button>
+      </div>
+    </dialog>
 
     <footer class="app-footer">
       <span class="app-footer-text">JellyTags &middot; Batch tag editor for Jellyfin</span>

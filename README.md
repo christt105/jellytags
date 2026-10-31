@@ -18,6 +18,10 @@ JellyTags is a lightweight, responsive web application for managing tags within 
 - **Responsive Design:** A mobile-friendly sliding sidebar allows you to manage tags on the go.
 - **Sorting & Filtering:** Find specific media quickly using the built-in search bar and sorting dropdown.
 - **Tag Filtering:** Filter the grid by tag, either to items that have a tag or to items missing it, useful for finding what still needs tagging.
+- **Merge & Rename:** Fold several tags or genres into one across every movie and series JellyTags lists (e.g. `70s` and `1972` into `1970s`), into an existing value or a new one. Renaming is the single-value case. Open it from the tag filter panel or the empty editor sidebar; it previews every affected item before saving.
+
+> [!NOTE]
+> Merging only rewrites the values stored on each item. Tags and genres that come from metadata providers (TMDB and similar) or NFO files are added again the next time Jellyfin refreshes that item's metadata, unless that field is locked on the item in Jellyfin's metadata editor.
 
 ## Requirements
 - A [Jellyfin](https://jellyfin.org/) server.

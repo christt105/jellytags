@@ -334,6 +334,139 @@ select.glass-input option {
   background: rgba(255, 255, 255, 0.14);
 }
 
+.tag-filter-merge-btn {
+  margin-top: 8px;
+}
+
+.sidebar-merge-btn {
+  margin-top: 16px;
+}
+
+/* Merge / rename dialog */
+.merge-dialog {
+  margin: auto;
+  width: min(92vw, 520px);
+  max-height: 90vh;
+  max-height: 90dvh;
+  overflow-y: auto;
+  padding: 24px;
+  color: var(--text-main);
+  background: rgba(13, 17, 23, 0.98);
+}
+
+.merge-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.merge-dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.merge-dialog-header .sidebar-title {
+  margin: 0;
+}
+
+.merge-dialog-header .merge-dialog-close-btn {
+  display: inline-block;
+}
+
+.merge-search-input,
+.merge-target-input {
+  padding: 8px 12px;
+  font-size: 0.9rem;
+  margin-bottom: 12px;
+}
+
+.merge-source-list {
+  max-height: 30vh;
+  overflow-y: auto;
+}
+
+.merge-source-chip {
+  color: var(--text-main);
+  font-family: inherit;
+}
+
+.merge-source-chip.selected {
+  background: rgba(170, 92, 195, 0.25);
+  color: #e5b3fe;
+  border-color: rgba(170, 92, 195, 0.6);
+}
+
+.merge-source-chip:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.merge-target-label {
+  display: block;
+}
+
+.merge-hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin: 0 0 12px;
+}
+
+.merge-preview-count {
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.merge-preview-details {
+  font-size: 0.8rem;
+  margin-bottom: 12px;
+}
+
+.merge-preview-details summary {
+  cursor: pointer;
+  color: var(--jelly-blue);
+}
+
+.merge-preview-list {
+  max-height: 20vh;
+  overflow-y: auto;
+  margin: 8px 0 0;
+  padding-left: 20px;
+}
+
+.merge-status {
+  font-size: 0.85rem;
+  margin-bottom: 12px;
+}
+
+.merge-status:empty {
+  display: none;
+}
+
+.merge-dialog-actions {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.merge-cancel-btn {
+  width: auto;
+  flex: 0 0 auto;
+  padding: 8px 16px;
+}
+
+.merge-confirm-btn {
+  flex: 1;
+  padding: 10px 16px;
+  font-size: 0.9rem;
+}
+
+.merge-confirm-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+  transform: none;
+  box-shadow: none;
+}
+
 /* Footer */
 .app-footer {
   display: flex;
