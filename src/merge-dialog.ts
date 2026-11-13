@@ -250,7 +250,8 @@ export class MergeDialog {
         const values = Array.from(counts.keys()).sort((a, b) => a.localeCompare(b));
         const searchText = this.sourceSearch.value.trim().toLowerCase();
 
-        this.targetOptions.innerHTML = values.map(value => `<option value="${escapeHtml(value)}"></option>`).join('');
+        const allValues = Array.from(this.valueCounts(this.scopeItems('all')).keys()).sort((a, b) => a.localeCompare(b));
+        this.targetOptions.innerHTML = allValues.map(value => `<option value="${escapeHtml(value)}"></option>`).join('');
 
         if (values.length === 0) {
             this.sourceList.innerHTML = `<span class="tag-filter-empty-msg">No ${this.noun()}s ${this.scope === 'all' ? 'in your library yet' : 'in this scope'}.</span>`;
