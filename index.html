@@ -100,6 +100,11 @@
         <button type="button" class="edit-target-btn active" data-merge-field="Tags">Tags</button>
         <button type="button" class="edit-target-btn" data-merge-field="Genres">Genres</button>
       </div>
+      <div class="edit-target-toggle merge-scope-toggle" role="group" aria-label="Scope">
+        <button type="button" class="edit-target-btn" data-merge-scope="selected">Selected items</button>
+        <button type="button" class="edit-target-btn" data-merge-scope="view">Current view</button>
+        <button type="button" class="edit-target-btn active" data-merge-scope="all">All libraries</button>
+      </div>
       <h4 id="merge-sources-title" class="section-subtitle">Tags to merge</h4>
       <input id="merge-source-search" type="text" class="glass-input merge-search-input" placeholder="Search tags..." autocomplete="off" aria-label="Search tags">
       <div id="merge-source-list" class="tag-filter-list merge-source-list" role="group" aria-labelledby="merge-sources-title"></div>

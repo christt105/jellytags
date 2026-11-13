@@ -740,6 +740,20 @@ select.glass-input option {
   color: #fff;
 }
 
+.edit-target-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.merge-scope-toggle {
+  margin-top: 0;
+}
+
+.merge-scope-toggle .edit-target-btn {
+  padding: 6px 4px;
+  font-size: 0.8rem;
+}
+
 .proposed-tags-container {
   display: flex;
   flex-wrap: wrap;

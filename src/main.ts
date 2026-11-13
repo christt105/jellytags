@@ -94,7 +94,12 @@ const tagFilterMerge = document.getElementById('tag-filter-merge') as HTMLButton
 const mergeDialog = new MergeDialog(
     document.getElementById('merge-dialog') as HTMLDialogElement,
     itemUpdater,
-    { getItems: () => allItems, onMerged: handleMerged }
+    {
+        getAllItems: () => allItems,
+        getSelectedIds: () => selectedIds,
+        getViewIds: () => filteredItems.map(item => item.Id),
+        onMerged: handleMerged
+    }
 );
 
 function openSidebar() {
@@ -216,11 +221,15 @@ function handleMerged({ field, sources, target, outcome }: MergeResult) {
     applyUpdatedValues(field, outcome.updated);
 
     if (field === 'Tags') {
-        if (replaceMerged(includeTagFilters, sources, target)) {
-            excludeTagFilters.delete(target);
-            sources.forEach(source => excludeTagFilters.delete(source));
-        } else if (replaceMerged(excludeTagFilters, sources, target) && includeTagFilters.has(target)) {
-            excludeTagFilters.delete(target);
+        const gone = new Set(sources);
+        allItems.forEach(item => (item.Tags || []).forEach(tag => gone.delete(tag)));
+        if (gone.size > 0) {
+            if (replaceMerged(includeTagFilters, gone, target)) {
+                excludeTagFilters.delete(target);
+                gone.forEach(source => excludeTagFilters.delete(source));
+            } else if (replaceMerged(excludeTagFilters, gone, target) && includeTagFilters.has(target)) {
+                excludeTagFilters.delete(target);
+            }
         }
     }
 
@@ -606,6 +615,8 @@ function renderSidebarEditor(valueCounts: Record<string, number>) {
             ` : ''}
         </div>
 
+        <button id="sidebar-merge-btn" type="button" class="tag-filter-clear-btn sidebar-merge-btn">Merge or rename in selection...</button>
+
         <div style="display: flex; gap: 16px; margin-bottom: 12px; margin-top: 12px; padding: 0 4px;">
             <label style="display: flex; align-items: center; gap: 6px; font-size: 0.85rem; cursor: pointer; color: var(--text-main);">
                 <input type="radio" name="apply-mode" value="append" checked style="accent-color: var(--jelly-blue);" /> Append
@@ -645,6 +656,7 @@ function renderSidebarEditor(valueCounts: Record<string, number>) {
     `;
 
     document.getElementById('clear-btn')?.addEventListener('click', clearSelection);
+    document.getElementById('sidebar-merge-btn')?.addEventListener('click', () => mergeDialog.open(editTarget));
 
     document.getElementById('sidebar-close')?.addEventListener('click', closeSidebar);
 

@@ -11,12 +11,22 @@ export type MergeResult = {
     outcome: UpdateOutcome;
 };
 
+export type MergeScope = 'selected' | 'view' | 'all';
+
 export type MergeDialogHost = {
-    getItems(): MediaItem[];
+    getAllItems(): MediaItem[];
+    getSelectedIds(): ReadonlySet<string>;
+    getViewIds(): string[];
     onMerged(result: MergeResult): void;
 };
 
 const previewLimit = 50;
+
+const scopeLabels: Record<MergeScope, string> = {
+    selected: 'Selected items',
+    view: 'Current view',
+    all: 'All libraries'
+};
 
 function valuesOf(item: MediaItem, field: EditField): string[] {
     return (field === 'Genres' ? item.Genres : item.Tags) || [];
@@ -26,18 +36,27 @@ function quoted(value: string): string {
     return `"${value}"`;
 }
 
+function plural(count: number, word: string): string {
+    return `${count} ${word}${count === 1 ? '' : 's'}`;
+}
+
 /**
- * Modal that folds several tags (or genres) into one across the whole library.
- * Renaming is the single-source case. The target may be an existing value or
- * a new one.
+ * Modal that folds several tags (or genres) into one. It acts on the selected
+ * items, the items currently shown in the grid, or every item in the library.
+ * The selection and the view are captured when the dialog opens. Renaming is
+ * the single-source case. The target may be an existing value or a new one.
  */
 export class MergeDialog {
     private field: EditField = 'Tags';
+    private scope: MergeScope = 'all';
+    private selectedIds = new Set<string>();
+    private viewIds = new Set<string>();
     private sources = new Set<string>();
     private running = false;
     private stopRequested = false;
 
     private readonly fieldButtons: HTMLButtonElement[];
+    private readonly scopeButtons: HTMLButtonElement[];
     private readonly sourcesTitle: HTMLElement;
     private readonly sourceSearch: HTMLInputElement;
     private readonly sourceList: HTMLElement;
@@ -55,6 +74,7 @@ export class MergeDialog {
         private readonly host: MergeDialogHost,
     ) {
         this.fieldButtons = Array.from(dialog.querySelectorAll<HTMLButtonElement>('[data-merge-field]'));
+        this.scopeButtons = Array.from(dialog.querySelectorAll<HTMLButtonElement>('[data-merge-scope]'));
         this.sourcesTitle = this.part('#merge-sources-title');
         this.sourceSearch = this.part('#merge-source-search');
         this.sourceList = this.part('#merge-source-list');
@@ -68,6 +88,9 @@ export class MergeDialog {
 
         this.fieldButtons.forEach(button => button.addEventListener('click', () => {
             this.setField(button.getAttribute('data-merge-field') as EditField);
+        }));
+        this.scopeButtons.forEach(button => button.addEventListener('click', () => {
+            this.setScope(button.getAttribute('data-merge-scope') as MergeScope);
         }));
         this.sourceSearch.addEventListener('input', () => this.renderSources());
         this.sourceList.addEventListener('click', (e) => {
@@ -92,6 +115,9 @@ export class MergeDialog {
 
     open(field: EditField = 'Tags') {
         this.field = field;
+        this.selectedIds = new Set(this.host.getSelectedIds());
+        this.viewIds = new Set(this.host.getViewIds());
+        this.scope = this.selectedIds.size > 0 ? 'selected' : 'all';
         this.reset();
         this.status.textContent = '';
         this.render();
@@ -133,6 +159,32 @@ export class MergeDialog {
         this.render();
     }
 
+    private setScope(scope: MergeScope) {
+        if (this.running || scope === this.scope) return;
+        if (scope === 'selected' && this.scopeItems(scope).length === 0) return;
+        this.scope = scope;
+        this.pruneMissingSources();
+        this.status.textContent = '';
+        this.render();
+    }
+
+    private scopeItems(scope: MergeScope = this.scope): MediaItem[] {
+        const all = this.host.getAllItems();
+        if (scope === 'all') return all;
+        const ids = scope === 'selected' ? this.selectedIds : this.viewIds;
+        return all.filter(item => ids.has(item.Id));
+    }
+
+    private scopeName(): string {
+        return this.scope === 'selected' ? 'the selection' : 'the current view';
+    }
+
+    private itemsPhrase(count: number): string {
+        if (this.scope === 'selected') return `${count} of ${plural(this.scopeItems().length, 'selected item')}`;
+        if (this.scope === 'view') return `${plural(count, 'item')} in current view`;
+        return plural(count, 'item');
+    }
+
     private toggleSource(value: string) {
         if (this.sources.has(value)) this.sources.delete(value);
         else this.sources.add(value);
@@ -149,9 +201,9 @@ export class MergeDialog {
         return new Set(Array.from(this.sources).filter(value => value !== target));
     }
 
-    private valueCounts(): Map<string, number> {
+    private valueCounts(items: MediaItem[] = this.scopeItems()): Map<string, number> {
         const counts = new Map<string, number>();
-        this.host.getItems().forEach(item => valuesOf(item, this.field).forEach(value => {
+        items.forEach(item => valuesOf(item, this.field).forEach(value => {
             counts.set(value, (counts.get(value) || 0) + 1);
         }));
         return counts;
@@ -161,7 +213,7 @@ export class MergeDialog {
         const target = this.target();
         const sources = this.effectiveSources();
         if (!target || sources.size === 0) return [];
-        return this.host.getItems().filter(item => needsMerge(valuesOf(item, this.field), sources, target));
+        return this.scopeItems().filter(item => needsMerge(valuesOf(item, this.field), sources, target));
     }
 
     private render() {
@@ -171,6 +223,15 @@ export class MergeDialog {
             button.classList.toggle('active', active);
             button.setAttribute('aria-pressed', String(active));
             button.disabled = this.running;
+        });
+        this.scopeButtons.forEach(button => {
+            const scope = button.getAttribute('data-merge-scope') as MergeScope;
+            const count = this.scopeItems(scope).length;
+            const active = scope === this.scope;
+            button.textContent = `${scopeLabels[scope]} (${count})`;
+            button.classList.toggle('active', active);
+            button.setAttribute('aria-pressed', String(active));
+            button.disabled = this.running || (scope === 'selected' && count === 0);
         });
         this.sourcesTitle.textContent = `${this.field} to merge`;
         this.sourceSearch.placeholder = `Search ${noun}s...`;
@@ -192,7 +253,7 @@ export class MergeDialog {
         this.targetOptions.innerHTML = values.map(value => `<option value="${escapeHtml(value)}"></option>`).join('');
 
         if (values.length === 0) {
-            this.sourceList.innerHTML = `<span class="tag-filter-empty-msg">No ${this.noun()}s in your library yet.</span>`;
+            this.sourceList.innerHTML = `<span class="tag-filter-empty-msg">No ${this.noun()}s ${this.scope === 'all' ? 'in your library yet' : 'in this scope'}.</span>`;
             return;
         }
 
@@ -214,21 +275,29 @@ export class MergeDialog {
     private renderTarget() {
         const noun = this.noun();
         const target = this.target();
-        const counts = this.valueCounts();
+        const allCounts = this.valueCounts(this.scopeItems('all'));
 
         if (!target) {
             this.targetHint.textContent = `Type a new name or pick an existing ${noun}.`;
             return;
         }
 
-        const existing = counts.get(target);
-        if (existing !== undefined) {
-            this.targetHint.textContent = `${quoted(target)} already exists on ${existing} item${existing === 1 ? '' : 's'}. The selected ${noun}s will be folded into it.`;
+        const total = allCounts.get(target);
+        if (total !== undefined) {
+            const inScope = this.scope === 'all' ? total : (this.valueCounts().get(target) || 0);
+            if (this.scope === 'all') {
+                this.targetHint.textContent = `${quoted(target)} already exists on ${plural(total, 'item')}. The selected ${noun}s will be folded into it.`;
+            } else if (inScope === 0) {
+                this.targetHint.textContent = `${quoted(target)} is not in this scope yet but exists on ${plural(total, 'other item')}. The selected ${noun}s will be folded into it.`;
+            } else {
+                const totalNote = total === inScope ? '' : ` (${total} in total)`;
+                this.targetHint.textContent = `${quoted(target)} already exists on ${plural(inScope, 'item')} in this scope${totalNote}. The selected ${noun}s will be folded into it.`;
+            }
             return;
         }
 
         const lowerTarget = target.toLowerCase();
-        const sameSpelling = Array.from(counts.keys()).filter(value => value.toLowerCase() === lowerTarget);
+        const sameSpelling = Array.from(allCounts.keys()).filter(value => value.toLowerCase() === lowerTarget);
         this.targetHint.textContent = sameSpelling.length > 0
             ? `${quoted(target)} is new, but differs only in case from ${sameSpelling.map(quoted).join(', ')}. Select ${sameSpelling.length === 1 ? 'it' : 'them'} above to end up with a single spelling.`
             : `${quoted(target)} is a new ${noun}.`;
@@ -259,7 +328,7 @@ export class MergeDialog {
         const shown = affected.slice(0, previewLimit);
         const remaining = affected.length - shown.length;
         this.preview.innerHTML = `
-            <p class="merge-preview-count">${affected.length} item${affected.length === 1 ? '' : 's'} will change.</p>
+            <p class="merge-preview-count">${plural(affected.length, 'item')} will change.</p>
             ${affected.length > 0 ? `
                 <details class="merge-preview-details">
                     <summary>Show affected items</summary>
@@ -275,7 +344,7 @@ export class MergeDialog {
 
     private confirmLabel(sources: Set<string>, target: string, affectedCount: number): string {
         if (!target || sources.size === 0) return 'Merge';
-        const items = `(${affectedCount} item${affectedCount === 1 ? '' : 's'})`;
+        const items = `(${this.itemsPhrase(affectedCount)})`;
         if (sources.size === 1) {
             return `Rename ${quoted(Array.from(sources)[0])} to ${quoted(target)} ${items}`;
         }
@@ -326,7 +395,8 @@ export class MergeDialog {
     private summary(outcome: UpdateOutcome, target: string, affected: MediaItem[]): string {
         const done = outcome.updated.size + outcome.unchangedIds.length;
         const nameOf = (id: string) => affected.find(item => item.Id === id)?.Name || id;
-        const parts = [`Merged into ${quoted(target)} on ${done} of ${affected.length} items.`];
+        const where = this.scope === 'all' ? '' : ` in ${this.scopeName()}`;
+        const parts = [`Merged into ${quoted(target)} on ${done} of ${affected.length} items${where}.`];
         if (outcome.failedIds.length > 0) {
             const names = outcome.failedIds.slice(0, 10).map(nameOf).join(', ');
             const more = outcome.failedIds.length > 10 ? ` (+${outcome.failedIds.length - 10} more)` : '';
