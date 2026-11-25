@@ -3,7 +3,7 @@
 </p>
 
 # JellyTags
-JellyTags is a lightweight, responsive web application for managing tags within your Jellyfin media library. Easily select multiple movies or shows and batch-apply tags.
+JellyTags is a lightweight, responsive web application for managing tags within your Jellyfin media library. Easily select multiple movies, shows or collections and batch-apply tags.
 
 ![Screenshot](docs/screenshot.png)
 
