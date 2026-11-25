@@ -35,6 +35,8 @@ const userApi = getUserApi(api);
 const userViewsApi = getUserViewsApi(api);
 const itemUpdater = new ItemFieldUpdater(itemsApi, updateApi, () => currentUserId);
 
+const editableItemTypes = [BaseItemKind.Movie, BaseItemKind.Series, BaseItemKind.BoxSet, BaseItemKind.Video] as BaseItemKind[];
+
 type SourceLibrary = {
     id: string;
     name: string;
@@ -337,7 +339,7 @@ async function fetchItems() {
             const fallbackRes = await itemsApi.getItems({
                 userId: currentUserId,
                 recursive: true,
-                includeItemTypes: [BaseItemKind.Movie, BaseItemKind.Series] as BaseItemKind[],
+                includeItemTypes: editableItemTypes,
                 fields: [ItemFields.Tags, ItemFields.Genres, ItemFields.DateCreated] as ItemFields[]
             });
 
@@ -351,7 +353,7 @@ async function fetchItems() {
                     userId: currentUserId,
                     parentId: library.id,
                     recursive: true,
-                    includeItemTypes: [BaseItemKind.Movie, BaseItemKind.Series] as BaseItemKind[],
+                    includeItemTypes: editableItemTypes,
                     fields: [ItemFields.Tags, ItemFields.Genres, ItemFields.DateCreated] as ItemFields[]
                 });
 
@@ -636,7 +638,7 @@ function renderSidebarEditor(valueCounts: Record<string, number>) {
             <h4 class="section-subtitle">Selected Items</h4>
             <div id="selected-items-list" class="selected-items-list">
                 ${selectedItems.map(item => {
-        let thumbHtml = `<div class="selected-item-thumb-placeholder">${item.Type === 'Movie' ? 'M' : 'S'}</div>`;
+        let thumbHtml = `<div class="selected-item-thumb-placeholder">${escapeHtml(item.Type?.charAt(0) ?? '?')}</div>`;
         if (item.ImageTags && item.ImageTags.Primary) {
             const thumbUrl = `${apiBase}/Items/${item.Id}/Images/Primary?tag=${item.ImageTags.Primary}&maxWidth=80`;
             thumbHtml = `<img src="${thumbUrl}" class="selected-item-thumb-img" />`;
