@@ -35,7 +35,7 @@ const userApi = getUserApi(api);
 const userViewsApi = getUserViewsApi(api);
 const itemUpdater = new ItemFieldUpdater(itemsApi, updateApi, () => currentUserId);
 
-const editableItemTypes = [BaseItemKind.Movie, BaseItemKind.Series, BaseItemKind.BoxSet] as BaseItemKind[];
+const editableItemTypes = [BaseItemKind.Movie, BaseItemKind.Series, BaseItemKind.BoxSet, BaseItemKind.Video] as BaseItemKind[];
 
 type SourceLibrary = {
     id: string;
